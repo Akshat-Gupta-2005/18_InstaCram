@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+*.log
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

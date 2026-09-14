@@ -1,0 +1,677 @@
+{
+  "generated_at": "2026-09-12T15:34:53.978Z",
+  "fields": [
+    {
+      "field": "Java Utils",
+      "kind": "overlap",
+      "candidates": [
+        {
+          "name": "HashMap",
+          "description": "A data structure that maps keys to values using hash tables."
+        },
+        {
+          "name": "StringBuilder",
+          "description": "A mutable sequence of characters for efficient string manipulation."
+        },
+        {
+          "name": "ArrayList",
+          "description": "A dynamic array that allows resizing and random access."
+        },
+        {
+          "name": "ConcurrentHashMap",
+          "description": "A thread-safe map that supports concurrent access."
+        },
+        {
+          "name": "Optional",
+          "description": "A container object that may or may not contain a non-null value."
+        },
+        {
+          "name": "Stream",
+          "description": "A sequence of elements supporting functional-style operations."
+        },
+        {
+          "name": "Supplier",
+          "description": "A functional interface that provides a value upon invocation."
+        },
+        {
+          "name": "Predicate",
+          "description": "A functional interface that tests a condition and returns a boolean."
+        },
+        {
+          "name": "Comparator",
+          "description": "An interface for comparing objects based on custom criteria."
+        },
+        {
+          "name": "DateTimeFormatter",
+          "description": "A formatter for formatting and parsing date-time objects."
+        },
+        {
+          "name": "LocalDateTime",
+          "description": "A date-time without time zone information."
+        },
+        {
+          "name": "Random",
+          "description": "A pseudo-random number generator for various distributions."
+        },
+        {
+          "name": "Scanner",
+          "description": "A class for parsing input from various input sources."
+        },
+        {
+          "name": "File",
+          "description": "A class representing a file or directory path in the file system."
+        },
+        {
+          "name": "Path",
+          "description": "An interface representing file system paths in a platform-independent way."
+        },
+        {
+          "name": "Files",
+          "description": "A utility class for file system operations in Java NIO."
+        },
+        {
+          "name": "URI",
+          "description": "A class representing a uniform resource identifier for web resources."
+        },
+        {
+          "name": "URL",
+          "description": "A class representing a uniform resource locator for web resources."
+        },
+        {
+          "name": "ClassLoader",
+          "description": "A mechanism for loading classes into the JVM at runtime."
+        }
+      ]
+    },
+    {
+      "field": "Java Collections",
+      "kind": "overlap",
+      "candidates": [
+        {
+          "name": "ArrayList",
+          "description": "A dynamic array that allows elements to be added and removed efficiently."
+        },
+        {
+          "name": "LinkedList",
+          "description": "A doubly-linked list that allows efficient insertion and deletion of elements."
+        },
+        {
+          "name": "HashSet",
+          "description": "A collection that stores unique elements using a hash table for fast lookups."
+        },
+        {
+          "name": "TreeSet",
+          "description": "A sorted set that uses a red-black tree for ordered element storage."
+        },
+        {
+          "name": "HashMap",
+          "description": "A key-value mapping that uses hashing for quick data retrieval."
+        },
+        {
+          "name": "TreeMap",
+          "description": "A sorted map that uses a red-black tree for ordered key-value pairs."
+        },
+        {
+          "name": "Queue",
+          "description": "A FIFO data structure that supports element insertion and removal from both ends."
+        },
+        {
+          "name": "Deque",
+          "description": "A double-ended queue that allows insertion and removal from both ends."
+        },
+        {
+          "name": "Iterator",
+          "description": "An interface for traversing elements in a collection without exposing its underlying structure."
+        },
+        {
+          "name": "Comparable",
+          "description": "An interface that defines a natural ordering for objects in a collection."
+        },
+        {
+          "name": "Comparator",
+          "description": "A functional interface that defines a custom ordering for objects in a collection."
+        },
+        {
+          "name": "SynchronizedMap",
+          "description": "A thread-safe map that provides synchronized methods for thread-safe access."
+        },
+        {
+          "name": "ConcurrentHashMap",
+          "description": "A thread-safe map that allows concurrent access without blocking."
+        },
+        {
+          "name": "CopyOnWriteArrayList",
+          "description": "A thread-safe list that creates a copy on each modification."
+        },
+        {
+          "name": "ArrayListIterator",
+          "description": "An iterator that traverses elements of an ArrayList in order."
+        },
+        {
+          "name": "HashSetIterator",
+          "description": "An iterator that traverses elements of a HashSet in arbitrary order."
+        },
+        {
+          "name": "Collection",
+          "description": "An interface that represents a group of objects that can be manipulated as a unit."
+        },
+        {
+          "name": "List",
+          "description": "An ordered collection that allows duplicate elements and indexed access."
+        },
+        {
+          "name": "Set",
+          "description": "A collection that contains unique elements with no defined order."
+        },
+        {
+          "name": "Map",
+          "description": "An associative container that maps keys to values using a unique key."
+        }
+      ]
+    },
+    {
+      "field": "Data Structures",
+      "kind": "overlap",
+      "candidates": [
+        {
+          "name": "Array",
+          "description": "A contiguous block of memory storing elements of the same type."
+        },
+        {
+          "name": "Linked List",
+          "description": "A sequence of nodes each pointing to the next node."
+        },
+        {
+          "name": "Stack",
+          "description": "A linear structure with last-in-first-out access pattern."
+        },
+        {
+          "name": "Queue",
+          "description": "A linear structure with first-in-first-out access pattern."
+        },
+        {
+          "name": "Tree",
+          "description": "A hierarchical structure with nodes connected by edges."
+        },
+        {
+          "name": "Binary Tree",
+          "description": "A tree with each node having at most two children."
+        },
+        {
+          "name": "Graph",
+          "description": "A collection of nodes connected by edges."
+        },
+        {
+          "name": "Hash Table",
+          "description": "A data structure that maps keys to values using a hash function."
+        },
+        {
+          "name": "Heap",
+          "description": "A tree-like structure where each parent node is ordered relative to its children."
+        },
+        {
+          "name": "Binary Search Tree",
+          "description": "A tree where each node has at most two children and values are ordered."
+        },
+        {
+          "name": "Balanced Tree",
+          "description": "A tree where the height of the left and right subtrees differ by at most one."
+        },
+        {
+          "name": "B-Tree",
+          "description": "A self-balancing tree designed for disk storage and efficient access."
+        },
+        {
+          "name": "Red-Black Tree",
+          "description": "A self-balancing binary search tree with color-based balancing rules."
+        },
+        {
+          "name": "Trie",
+          "description": "A tree-like structure used for efficient prefix-based searches."
+        },
+        {
+          "name": "Segment Tree",
+          "description": "A binary tree used for efficient range queries and updates."
+        },
+        {
+          "name": "Union-Find",
+          "description": "A data structure that tracks connected components in a graph."
+        },
+        {
+          "name": "Binary Indexed Tree",
+          "description": "A data structure for efficiently calculating prefix sums and updates."
+        },
+        {
+          "name": "Skip List",
+          "description": "A probabilistic data structure for efficient search and insertion."
+        },
+        {
+          "name": "Circular Buffer",
+          "description": "A fixed-size buffer where the end wraps around to the beginning."
+        },
+        {
+          "name": "Splay Tree",
+          "description": "A self-adjusting binary search tree with move-to-front heuristic."
+        }
+      ]
+    },
+    {
+      "field": "Data Structures and Algorithms",
+      "kind": "collision",
+      "candidates": [
+        {
+          "name": "Binary Search",
+          "description": "A search algorithm that divides a sorted array into halves to locate an element."
+        },
+        {
+          "name": "Graph Traversal",
+          "description": "A process to visit all nodes in a graph using methods like BFS or DFS."
+        },
+        {
+          "name": "Merge Sort",
+          "description": "A divide-and-conquer sorting algorithm that splits and merges arrays recursively."
+        },
+        {
+          "name": "Linked List",
+          "description": "A linear data structure where each element points to the next via a reference."
+        },
+        {
+          "name": "Tree Traversal",
+          "description": "A method to visit nodes in a tree structure using inorder, preorder, or postorder."
+        },
+        {
+          "name": "Priority Queue",
+          "description": "A queue where elements are served based on their priority rather than insertion order."
+        },
+        {
+          "name": "Dynamic Programming",
+          "description": "A technique that solves problems by breaking them into overlapping subproblems."
+        },
+        {
+          "name": "Hash Collision",
+          "description": "A situation where two different keys produce the same hash value in a hash table."
+        },
+        {
+          "name": "Recursion",
+          "description": "A method where a function calls itself to solve a smaller instance of the same problem."
+        },
+        {
+          "name": "Graph Coloring",
+          "description": "An assignment of colors to vertices such that no adjacent vertices share the same color."
+        },
+        {
+          "name": "Union-Find",
+          "description": "A data structure that tracks connected components in a graph efficiently."
+        },
+        {
+          "name": "Time Complexity",
+          "description": "A measure of the amount of time an algorithm takes relative to input size."
+        },
+        {
+          "name": "Space Complexity",
+          "description": "A measure of the memory an algorithm uses relative to input size."
+        },
+        {
+          "name": "Big O Notation",
+          "description": "A mathematical notation that describes the limiting behavior of a function."
+        },
+        {
+          "name": "Balanced Tree",
+          "description": "A tree where the height of the left and right subtrees differs by at most one."
+        },
+        {
+          "name": "Breadth-First Search",
+          "description": "A graph traversal algorithm that explores all neighbors before moving deeper."
+        },
+        {
+          "name": "Depth-First Search",
+          "description": "A graph traversal algorithm that explores as far as possible along each branch."
+        },
+        {
+          "name": "Red-Black Tree",
+          "description": "A self-balancing binary search tree with specific coloring properties."
+        },
+        {
+          "name": "Circular Queue",
+          "description": "A queue where the last element points back to the first to form a circle."
+        },
+        {
+          "name": "Segment Tree",
+          "description": "A data structure that allows efficient range queries and updates on an array."
+        }
+      ]
+    },
+    {
+      "field": "Web Development",
+      "kind": "collision",
+      "candidates": [
+        {
+          "name": "HTML",
+          "description": "Markup language for structuring web content."
+        },
+        {
+          "name": "CSS",
+          "description": "Style sheet language for styling web content."
+        },
+        {
+          "name": "JavaScript",
+          "description": "Programming language for client-side logic."
+        },
+        {
+          "name": "DOM",
+          "description": "Document object model representing webpage structure."
+        },
+        {
+          "name": "HTTP",
+          "description": "Protocol for transferring data over the web."
+        },
+        {
+          "name": "API",
+          "description": "Interface for communication between systems."
+        },
+        {
+          "name": "REST",
+          "description": "Architectural style for web services."
+        },
+        {
+          "name": "Servlet",
+          "description": "Server-side component handling HTTP requests."
+        },
+        {
+          "name": "JSP",
+          "description": "Technology for embedding Java in HTML."
+        },
+        {
+          "name": "WebSocket",
+          "description": "Protocol for bidirectional communication."
+        },
+        {
+          "name": "React",
+          "description": "JavaScript library for building user interfaces."
+        },
+        {
+          "name": "Node.js",
+          "description": "Runtime for executing JavaScript on the server."
+        },
+        {
+          "name": "MongoDB",
+          "description": "NoSQL database for storing unstructured data."
+        },
+        {
+          "name": "Webpack",
+          "description": "Tool for bundling and optimizing assets."
+        },
+        {
+          "name": "Git",
+          "description": "Version control system for tracking changes."
+        },
+        {
+          "name": "CI/CD",
+          "description": "Process for automating deployment pipelines."
+        },
+        {
+          "name": "OAuth",
+          "description": "Framework for authorization and authentication."
+        },
+        {
+          "name": "JWT",
+          "description": "Token format for secure information exchange."
+        },
+        {
+          "name": "Sass",
+          "description": "Preprocessor for writing CSS with variables and mixins."
+        }
+      ]
+    },
+    {
+      "field": "Frontend Frameworks",
+      "kind": "collision",
+      "candidates": [
+        {
+          "name": "Component",
+          "description": "A self-contained unit of user interface logic and structure."
+        },
+        {
+          "name": "State",
+          "description": "Current data that affects how a component renders and behaves."
+        },
+        {
+          "name": "Prop",
+          "description": "Data passed from a parent component to a child component."
+        },
+        {
+          "name": "Event",
+          "description": "Signal triggered by user interaction or system action."
+        },
+        {
+          "name": "Virtual DOM",
+          "description": "In-memory representation of the actual DOM for efficient updates."
+        },
+        {
+          "name": "Routing",
+          "description": "Navigation between different views or pages in an application."
+        },
+        {
+          "name": "Template",
+          "description": "Syntax for defining the structure of a user interface."
+        },
+        {
+          "name": "Directive",
+          "description": "Instruction for the framework to modify element behavior or appearance."
+        },
+        {
+          "name": "Service",
+          "description": "Reusable logic that can be injected into components or other services."
+        },
+        {
+          "name": "Module",
+          "description": "Organized collection of related components, directives, and pipes."
+        },
+        {
+          "name": "Pipe",
+          "description": "Transformation function for formatting data in templates."
+        },
+        {
+          "name": "Dependency Injection",
+          "description": "Mechanism for providing dependencies to components and services."
+        },
+        {
+          "name": "Lifecycle Hook",
+          "description": "Function called at specific stages of a component's existence."
+        },
+        {
+          "name": "Form Control",
+          "description": "Element that manages user input and validation state."
+        },
+        {
+          "name": "HttpClient",
+          "description": "Module for making HTTP requests to backend services."
+        },
+        {
+          "name": "Observable",
+          "description": "Stream of asynchronous events or data values."
+        },
+        {
+          "name": "Subscription",
+          "description": "Link between an Observable and a consumer of its data."
+        },
+        {
+          "name": "NgModule",
+          "description": "Bootstrap for organizing and bootstrapping an Angular application."
+        },
+        {
+          "name": "Decorator",
+          "description": "Annotation that adds metadata to classes, methods, or properties."
+        },
+        {
+          "name": "Renderer",
+          "description": "Abstraction for creating and manipulating DOM elements safely."
+        }
+      ]
+    },
+    {
+      "field": "Behavioural Economics",
+      "kind": "control",
+      "candidates": [
+        {
+          "name": "Loss Aversion",
+          "description": "A bias where losses loom larger than equivalent gains."
+        },
+        {
+          "name": "Present Bias",
+          "description": "A tendency to prioritize immediate rewards over future benefits."
+        },
+        {
+          "name": "Mental Accounting",
+          "description": "A way people categorize money for different purposes."
+        },
+        {
+          "name": "Status Quo Bias",
+          "description": "A preference for the current state over change."
+        },
+        {
+          "name": "Anchoring",
+          "description": "Relying too heavily on initial information when making decisions."
+        },
+        {
+          "name": "Framing Effect",
+          "description": "How information is presented influences decision-making."
+        },
+        {
+          "name": "Nudge",
+          "description": "A choice architecture that influences decisions without restricting freedom."
+        },
+        {
+          "name": "Hyperbolic Discounting",
+          "description": "Discounting future rewards more than exponential discounting."
+        },
+        {
+          "name": "Endowment Effect",
+          "description": "Valuing an item more once owned than when merely possessed."
+        },
+        {
+          "name": "Availability Heuristic",
+          "description": "Estimating likelihood based on ease of recall."
+        },
+        {
+          "name": "Optimism Bias",
+          "description": "Belief that positive outcomes are more likely than objective evidence suggests."
+        },
+        {
+          "name": "Social Proof",
+          "description": "Behavior influenced by observing others' actions."
+        },
+        {
+          "name": "Salience",
+          "description": "The prominence of a factor in decision-making."
+        },
+        {
+          "name": "Choice Architecture",
+          "description": "Designing environments to influence decisions subtly."
+        },
+        {
+          "name": "Default Bias",
+          "description": "Preference for pre-set options over active choice."
+        },
+        {
+          "name": "Feedback Loop",
+          "description": "A mechanism where outcomes influence future behavior."
+        },
+        {
+          "name": "Incentive Compatibility",
+          "description": "Designing incentives to align with desired behavior."
+        },
+        {
+          "name": "System 1 Thinking",
+          "description": "Fast, intuitive, and automatic cognitive processing."
+        }
+      ]
+    },
+    {
+      "field": "Marine Biology",
+      "kind": "control",
+      "candidates": [
+        {
+          "name": "Biological Diversity",
+          "description": "Variation in species and ecosystems within marine environments."
+        },
+        {
+          "name": "Ocean Currents",
+          "description": "Continuous movement of seawater driven by forces like wind and temperature."
+        },
+        {
+          "name": "Marine Ecosystems",
+          "description": "Interconnected communities of organisms and their physical environment in the sea."
+        },
+        {
+          "name": "Plankton Dynamics",
+          "description": "Processes governing the growth and distribution of microscopic marine organisms."
+        },
+        {
+          "name": "Coral Reef Structure",
+          "description": "Physical and biological framework supporting diverse marine life in reefs."
+        },
+        {
+          "name": "Marine Pollution",
+          "description": "Contamination of ocean environments by human-generated waste and chemicals."
+        },
+        {
+          "name": "Fisheries Management",
+          "description": "Regulation of fishing activities to ensure sustainable marine resource use."
+        },
+        {
+          "name": "Marine Microbiology",
+          "description": "Study of microorganisms in ocean environments and their ecological roles."
+        },
+        {
+          "name": "Marine Genetics",
+          "description": "Study of genetic material in marine organisms and its evolutionary significance."
+        },
+        {
+          "name": "Marine Biogeochemistry",
+          "description": "Study of chemical cycles and nutrient flows in marine environments."
+        },
+        {
+          "name": "Marine Biodiversity",
+          "description": "Variation in species and genetic diversity within marine ecosystems."
+        },
+        {
+          "name": "Marine Ecology",
+          "description": "Study of interactions between marine organisms and their environment."
+        },
+        {
+          "name": "Marine Zoology",
+          "description": "Study of animal life in ocean environments and their biological characteristics."
+        },
+        {
+          "name": "Marine Botany",
+          "description": "Study of plant life in ocean environments and their biological characteristics."
+        },
+        {
+          "name": "Marine Conservation",
+          "description": "Protection and sustainable use of marine ecosystems and species."
+        },
+        {
+          "name": "Marine Geology",
+          "description": "Study of the physical structure and processes of the ocean floor and seabed."
+        },
+        {
+          "name": "Marine Acoustics",
+          "description": "Study of sound propagation and use in marine environments for communication and research."
+        },
+        {
+          "name": "Marine Toxicology",
+          "description": "Study of harmful effects of pollutants on marine organisms and ecosystems."
+        },
+        {
+          "name": "Marine Biotechnology",
+          "description": "Application of biological resources from marine organisms for industrial and medical use."
+        },
+        {
+          "name": "Marine Climate Interactions",
+          "description": "Study of how marine systems influence and are influenced by global climate patterns."
+        }
+      ]
+    }
+  ]
+}

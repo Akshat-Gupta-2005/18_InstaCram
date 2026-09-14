@@ -1,0 +1,101 @@
+name: instacram
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-instacram}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-instacram}
+      POSTGRES_DB: ${POSTGRES_DB:-instacram}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-instacram} -d ${POSTGRES_DB:-instacram}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.1
+    ports:
+      - "${QDRANT_PORT:-6333}:6333"
+    volumes:
+      - qdrantdata:/qdrant/storage
+
+  # Self-hosted sentence-transformers. MODEL_ID is deliberately a variable: W3's
+  # calibration sweep compares candidates before one is committed, and the chosen
+  # model fixes the Qdrant vector dimension.
+  #
+  # Pinned to an exact version, never `latest`. cpu-1.5 could not download models
+  # at all (its bundled hf-hub can't follow Hugging Face's relative redirects, P19).
+  # And the calibrated similarity threshold is only valid for vectors from one exact
+  # runtime, so an image that drifts on a future pull would silently invalidate it.
+  embeddings:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.9.3
+    command: ["--model-id", "${EMBEDDING_MODEL:-intfloat/e5-base-v2}"]
+    ports:
+      - "${EMBEDDINGS_PORT:-8081}:80"
+    volumes:
+      - embeddingcache:/data
+
+  # Talks to Ollama running on the HOST machine, not in a container: the model
+  # weights and the GPU live there. host.docker.internal is how a container
+  # reaches its host; extra_hosts makes that name work on Linux too, where it
+  # isn't built in. Which model gets used is decided in config.yaml.
+  llm-gateway:
+    image: ghcr.io/berriai/litellm:main-latest
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    ports:
+      - "${LLM_GATEWAY_PORT:-4000}:4000"
+    environment:
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./services/llm-gateway/config.yaml:/app/config.yaml:ro
+
+  serving:
+    # Root context so the image can include prompts/, which the agents read at runtime.
+    build:
+      context: .
+      dockerfile: services/serving/Dockerfile
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-instacram}:${POSTGRES_PASSWORD:-instacram}@postgres:5432/${POSTGRES_DB:-instacram}
+      QDRANT_URL: http://qdrant:6333
+      EMBEDDINGS_URL: http://embeddings:80
+      LLM_GATEWAY_URL: http://llm-gateway:4000
+      PORT: 3000
+    ports:
+      - "${SERVING_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  pipeline:
+    build:
+      context: .
+      dockerfile: services/pipeline/Dockerfile
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-instacram}:${POSTGRES_PASSWORD:-instacram}@postgres:5432/${POSTGRES_DB:-instacram}
+      QDRANT_URL: http://qdrant:6333
+      EMBEDDINGS_URL: http://embeddings:80
+      LLM_GATEWAY_URL: http://llm-gateway:4000
+      PORT: 8000
+    ports:
+      - "${PIPELINE_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  qdrantdata:
+  embeddingcache:

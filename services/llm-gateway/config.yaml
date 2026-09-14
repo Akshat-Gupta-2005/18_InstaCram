@@ -1,0 +1,50 @@
+# LiteLLM gateway. Both backend services call this one OpenAI-compatible endpoint,
+# so the model is a config value, not a code dependency. THIS FILE IS THE SWITCH:
+# changing the model everywhere is an edit here, and nothing else.
+#
+# Default: Ollama running on the HOST machine, not in a container - that is where
+# the model weights and the GPU are. Inside a container `localhost` means the
+# container itself, so the host is reached at host.docker.internal, supplied by
+# docker-compose as OLLAMA_BASE_URL.
+#
+# Needs on the host:  ollama serve   +   ollama pull qwen3:8b
+
+model_list:
+  - model_name: default
+    litellm_params:
+      model: ollama_chat/qwen3:8b
+      api_base: os.environ/OLLAMA_BASE_URL
+      # qwen3 is a reasoning model, and thinking mode is off for two measured
+      # reasons. Its reasoning consumes the token budget - a 64-token call came
+      # back with EMPTY content and 70 tokens spent - and LiteLLM switches the
+      # mode on by appending "/think" to the user message, which showed up in a
+      # reply as "OK /think". Every prompt here demands strict JSON, so neither
+      # a truncated answer nor a modified prompt is acceptable. See P23.
+      think: false
+
+  - model_name: fallback
+    litellm_params:
+      model: ollama_chat/qwen2.5-coder:7b
+      api_base: os.environ/OLLAMA_BASE_URL
+
+  # To swap back to a hosted provider: replace the `default` entry above with
+  # this and put a key in .env. No code changes anywhere.
+  #
+  # - model_name: default
+  #   litellm_params:
+  #     model: gemini/gemini-2.0-flash
+  #     api_key: os.environ/GEMINI_API_KEY
+
+litellm_settings:
+  # Both entries point at the same Ollama server, so this covers a bad model, not
+  # a dead host. Real cross-provider fallback returns if a hosted model is added.
+  fallbacks: [{ "default": ["fallback"] }]
+  num_retries: 2
+  # Local inference is slower than a hosted API, and the first call after a model
+  # loads into memory is slower still. This timeout is deliberately generous.
+  request_timeout: 600
+
+general_settings:
+  # Embeddings do NOT route through here. They run against the self-hosted
+  # `embeddings` service, because that call is the hottest path in the system.
+  master_key: null

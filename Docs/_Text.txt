@@ -1,0 +1,87 @@
+The problem
+Attention spans have collapsed. People spend hours in short-form scroll loops (Reels, Shorts, TikTok) that are optimized purely for dopamine, not retention or growth. That habit isn't going away — so instead of fighting it, you're hijacking the same mechanism for something useful.
+
+The core mechanic
+A short-form scrolling app where the unit of content isn't a video — it's a single, self-contained "microlesson": one topic, one page, no scrolling within it, digestible in the time it'd take to watch one reel. The user picks a field of interest (e.g. "Java Utils," "Behavioral Economics," "Marine Biology"), and the app populates a feed of atomic topics within that field — HashMap, then Queue, then Stack, and so on — each scraped and distilled from the web into that one-page format.
+
+The two jobs it does
+
+Discovery/learning — a low-friction way to pick up new topics in a field you're interested in, a few seconds at a time.
+Spaced revision — because topics are small and repeatable, the same feed (or a resurfaced version of it) can act as passive reinforcement, refreshing concepts you've already seen the way spaced repetition does — except it happens through the scroll habit itself rather than a deliberate "review session."
+
+The psychological bet
+The reason reels are addictive is the format, not the content — short, low-commitment, endless, rewarding. You're keeping that format intact and swapping the content payload from entertainment to knowledge. The claim is that people will absorb small facts/concepts subconsciously, the same way they absorb trends and jokes now, just by scrolling — no deliberate "study mode" required.
+
+What this fundamentally is
+An infinite-feed, field-scoped microlearning app where content is auto-sourced (via scraping) rather than user-generated, and the feed algorithm's job is topic sequencing/resurfacing within a chosen domain rather than engagement-maximization for its own sake.
+
+
+V2
+The problem, stated honestly: People's attention has shifted almost entirely into short-form scroll habits. That habit isn't disappearing, and fighting it head-on (telling people to read long-form instead) doesn't work. The opportunity isn't to replace deep learning with scrolling — it's to put something useful into the exact slot that reels currently occupy: the idle, bored, waiting-room moments where you're going to scroll something regardless.
+
+What the app actually does: You pick a field of interest — tech or non-tech, anything — and the app sources small, self-contained topics from that field into a database. Each scroll is one page, one topic, readable in about the time it takes to watch a reel: HashMap, then Queue, then Stack; or Man-in-the-Loop, then Man-on-the-Loop, then something else adjacent. No video, just short, focused text.
+
+What it's actually for — and what it isn't: This isn't a tool for learning something complex from zero. It's a tool for two closely related things:
+
+Staying primed on the periphery of a field. Seeing a concept once, briefly, so that when it comes up later — in an interview, a conversation, a real situation — you're not starting cold. You have something to reach for, even if it's not deep mastery.
+Revisiting things you've already been exposed to once, in a format that matches how that material was probably structured in the first place. A long explainer video is usually just a sequence of small sub-topics stitched together; this reformats that same material into its natural, separable pieces so it can be skimmed back through instead of re-watched in full.
+
+Both of those are exposure-and-recall mechanics, not first-time deep instruction — and that's a deliberate, honest boundary, not a limitation to hide. The value is in priming and refreshing, not in teaching from scratch.
+
+Current scope: Topics that don't reduce cleanly to one page — anything with real multi-step reasoning or nuance — are out of scope for now, pushed to a later phase. Likewise, any notion of ordering topics by prerequisite or dependency is deferred; right now it's a flat, field-scoped feed, not a curriculum.
+
+That's the idea in its current, narrowed form: a scroll feed of small, sourced, one-page topics per field, built to occupy the reel-shaped gap in people's attention with something that primes and refreshes knowledge instead of just entertaining.
+
+
+FEATURES
+Personalization & content shaping
+
+Multi-field feeds — blend more than one interest into a single scroll instead of one field at a time
+A depth toggle per topic (quick definition vs slightly deeper explanation of the same thing)
+"More like this" branching after a card — see HashMap, get offered TreeMap or LinkedHashMap next
+Feed generation from a pasted job description or syllabus — turns your own Sabre-interview story into an actual feature: paste a JD, get a feed of likely concepts for that role
+Trending-within-field topics (what's commonly being asked/discussed in a domain right now)
+
+Retention mechanics
+
+A tiny recall prompt at the end of a card (not a full quiz — just "what does this do?" before revealing) to convert passive viewing into active recall
+Confidence-based resurfacing — swipe/rate how well you knew it, and use that to decide when it comes back (classic spaced-repetition, Anki-style)
+Bookmark/save a card to a personal revision pile
+A lightweight "test me" card that occasionally interrupts the feed with a quick question instead of pure exposure
+
+Format variety
+
+Optional TTS/audio narration for eyes-free consumption
+Auto-generated diagrams for topics that are inherently visual (data structures, architectures)
+Explanation-style toggle — plain/formal vs analogy-based vs ELI5
+A "why this matters" one-liner attached to each card, tying the fact to a real use case (this is literally your own origin story, generalized)
+
+Trust & sourcing
+
+Visible source link per card, so a user can verify or go deeper if something feels off
+A confidence/verification tag distinguishing scraped-and-verified content from AI-generated-and-unreviewed content
+User flagging for incorrect cards, with a visible correction history
+
+Utility / on-the-go framing
+
+A "before this moment" quick mode — e.g. select a handful of cards to blast through right before a meeting or interview
+Home-screen widget or lock-screen glanceable card, so you don't even need to open the app
+Offline packs — download a field's cards in advance
+A direct search bar to jump straight to one topic instead of waiting on the algorithm
+
+Progress & motivation
+
+A personal dashboard — topics seen per field, a rough "coverage map" of how much of a field you've touched
+Streaks / daily goals, in the same vein as the apps you're trying to displace, but pointed at something useful
+A weekly recap of what you actually saw that week
+
+Social layer
+
+Share a single card to a friend
+Follow a curated feed someone else (an expert, a creator) has built for a field
+Light community correction/voting on card accuracy, rather than just your own review pipeline
+
+Input variety
+
+Let users request a topic directly ("add X to my feed") instead of only algorithmic sourcing
+Multi-language card generation for the same topic set

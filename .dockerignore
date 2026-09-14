@@ -1,0 +1,15 @@
+# Build context is the repo root for both services, so this file is what keeps
+# the context small. The per-service .dockerignore files no longer apply.
+**/node_modules
+**/dist
+**/.venv
+**/venv
+**/__pycache__
+**/*.egg-info
+**/.pytest_cache
+**/.ruff_cache
+.git
+.github
+Docs
+*.log
+.env

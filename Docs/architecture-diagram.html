@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Microlearn — System Architecture (v1 draft)</title>
+<style>
+  :root{
+    --bg:#0B1220;
+    --panel:#0F1A2E;
+    --card:#151F35;
+    --card-border:#22304C;
+    --text:#E2E8F0;
+    --text-dim:#8B9BB4;
+    --mono: ui-monospace, "Cascadia Code", "SFMono-Regular", Menlo, Consolas, monospace;
+    --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+    --client:#2DD4BF;
+    --gateway:#38BDF8;
+    --serving:#818CF8;
+    --decision:#FBBF24;
+    --success:#34D399;
+    --agent:#F59E0B;
+    --scraper:#FB923C;
+    --fail:#F87171;
+    --reldb:#10B981;
+    --vecdb:#A78BFA;
+    --infra:#94A3B8;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);padding:36px 40px 60px;}
+  h1{font-family:var(--mono);font-size:21px;letter-spacing:0.4px;margin:0 0 6px 0;color:#F8FAFC;font-weight:600;}
+  .subtitle{color:var(--text-dim);font-size:13px;margin-bottom:22px;max-width:1100px;line-height:1.5;}
+  .subtitle b{color:#CBD5E1;}
+  .legend{display:flex;flex-wrap:wrap;gap:10px 26px;padding:16px 20px;background:var(--panel);border:1px solid var(--card-border);border-radius:10px;margin-bottom:30px;font-size:12px;}
+  .legend-title{width:100%;font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;}
+  .legend-item{display:flex;align-items:center;gap:7px;color:#CBD5E1;white-space:nowrap;}
+  .swatch{width:11px;height:11px;border-radius:3px;flex-shrink:0;}
+  .line-swatch{width:24px;height:0;border-top:2.5px solid;flex-shrink:0;}
+  .dashed{border-top-style:dashed;}
+
+  .canvas-wrap{overflow-x:auto;border-radius:12px;}
+  .canvas{position:relative;width:1760px;height:2560px;}
+
+  .band{position:absolute;border-radius:16px;border:1.5px dashed;background:rgba(255,255,255,0.015);}
+  .band-label{position:absolute;font-family:var(--mono);font-size:11px;letter-spacing:1.2px;text-transform:uppercase;font-weight:700;}
+
+  .box{position:absolute;background:var(--card);border:1px solid var(--card-border);border-left-width:4px;border-radius:9px;padding:11px 14px;box-shadow:0 2px 10px rgba(0,0,0,0.25);}
+  .box h3{font-family:var(--mono);font-size:12.5px;margin:0 0 3px 0;color:#F8FAFC;font-weight:700;line-height:1.3;}
+  .box .tag{font-family:var(--mono);font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.6px;display:block;margin-bottom:6px;}
+  .box p{margin:0;color:#9FB0C8;font-size:11.2px;line-height:1.45;}
+  .box ul{margin:5px 0 0 0;padding-left:14px;color:#9FB0C8;font-size:10.4px;font-family:var(--mono);line-height:1.55;}
+  .box ul li{margin-bottom:1px;}
+
+  .box.client{border-left-color:var(--client);}
+  .box.gateway{border-left-color:var(--gateway);}
+  .box.serving{border-left-color:var(--serving);}
+  .box.decision{border-left-color:var(--decision);border-style:dashed;background:#1A1608;}
+  .box.success{border-left-color:var(--success);}
+  .box.agent{border-left-color:var(--agent);}
+  .box.scraper{border-left-color:var(--scraper);}
+  .box.fail{border-left-color:var(--fail);}
+  .box.reldb{border-left-color:var(--reldb);}
+  .box.vecdb{border-left-color:var(--vecdb);}
+  .box.infra{border-left-color:var(--infra);}
+
+  svg.connectors{position:absolute;top:0;left:0;width:1760px;height:2560px;pointer-events:none;}
+  .edge-label{font-family:var(--mono);font-size:10.5px;font-weight:700;}
+</style>
+</head>
+<body>
+
+<h1>// microlearn — system architecture (v1 draft)</h1>
+<div class="subtitle">Field-scoped scroll feed · cache-then-generate agentic pipeline · split services · vector-DB dedup at generation time. <b>v1 uses strict-threshold name-embedding matching only</b> — a meaning-disambiguation step is added later only if bad merges actually show up on real data. Specific LLM/model choices and full tech stack are intentionally not decided yet.</div>
+
+<div class="legend">
+  <div class="legend-title">Component types</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--client)"></span>Client / local</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--gateway)"></span>API Gateway</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--serving)"></span>Serving / Read Service</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--decision)"></span>Decision / lookup</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--agent)"></span>LLM Agent</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--scraper)"></span>Non-LLM (scraper)</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--success)"></span>Match / Pass path</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--fail)"></span>Fail path</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--reldb)"></span>Relational / View DB</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--vecdb)"></span>Vector DB</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--infra)"></span>Cross-cutting infra</div>
+
+  <div class="legend-title" style="margin-top:6px;">Arrows</div>
+  <div class="legend-item"><span class="line-swatch" style="border-color:#64748B"></span>sequential flow</div>
+  <div class="legend-item"><span class="line-swatch" style="border-color:#34D399"></span>match / pass</div>
+  <div class="legend-item"><span class="line-swatch dashed" style="border-color:#FBBF24"></span>no-match → trigger</div>
+  <div class="legend-item"><span class="line-swatch" style="border-color:#F87171"></span>fail</div>
+  <div class="legend-item"><span class="line-swatch dashed" style="border-color:#A78BFA"></span>vector lookup</div>
+  <div class="legend-item"><span class="line-swatch dashed" style="border-color:#2DD4BF"></span>read / sync</div>
+</div>
+
+<div class="canvas-wrap">
+<div class="canvas">
+
+  <svg class="connectors" viewBox="0 0 1760 2560">
+    <defs>
+      <marker id="m-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#64748B"/></marker>
+      <marker id="m-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#34D399"/></marker>
+      <marker id="m-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#FBBF24"/></marker>
+      <marker id="m-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#F87171"/></marker>
+      <marker id="m-violet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#A78BFA"/></marker>
+      <marker id="m-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2DD4BF"/></marker>
+    </defs>
+
+    <!-- client -> gateway -->
+    <path d="M710,100 L710,150 L880,150 L880,200" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+    <path d="M1090,100 L1090,150 L880,150 L880,200" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+
+    <!-- gateway -> feed orchestrator -->
+    <path d="M880,290 L880,410 L330,410 L330,430" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+
+    <!-- feed orch -> candidate gen -->
+    <path d="M560,500 L620,500" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+
+    <!-- candidate gen -> decision -->
+    <path d="M850,570 L850,650 L880,650 L880,690" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+
+    <!-- decision -> cache hit (MATCH) -->
+    <path d="M630,752 L550,758" stroke="#34D399" stroke-width="2.6" fill="none" marker-end="url(#m-green)"/>
+    <text class="edge-label" x="558" y="740" fill="#34D399">MATCH</text>
+
+    <!-- decision -> genband (NO MATCH) -->
+    <path d="M880,810 L880,900" stroke="#FBBF24" stroke-width="2.6" stroke-dasharray="6,5" fill="none" marker-end="url(#m-amber)"/>
+    <text class="edge-label" x="892" y="860" fill="#FBBF24">NO MATCH</text>
+
+    <!-- genband entry -> 7a / 7b -->
+    <path d="M880,900 L880,930 L370,930 L370,960" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+    <path d="M880,900 L880,960" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+
+    <!-- 7a/7b -> 7c -->
+    <path d="M370,1100 L370,1120 L880,1120 L880,1140" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+    <path d="M880,1100 L880,1140" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+
+    <!-- 7c -> 7d -->
+    <path d="M880,1270 L880,1320" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+
+    <!-- 7d -> 7e FAIL -->
+    <path d="M630,1385 L580,1385" stroke="#F87171" stroke-width="2.6" fill="none" marker-end="url(#m-red)"/>
+    <text class="edge-label" x="595" y="1372" fill="#F87171">FAIL</text>
+
+    <!-- 7d -> 7f PASS -->
+    <path d="M1130,1385 L1180,1385" stroke="#34D399" stroke-width="2.6" fill="none" marker-end="url(#m-green)"/>
+    <text class="edge-label" x="1136" y="1372" fill="#34D399">PASS</text>
+
+    <!-- 7f -> scroll-content vector db -->
+    <path d="M1420,1450 L1420,1560" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+
+    <!-- 7f -> relational db (persist scroll) -->
+    <path d="M1250,1450 L1250,1490 L30,1490 L30,1740 L100,1740" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+
+    <!-- decision -> topic-name vector db (lookup, violet dashed, via right trunk) -->
+    <path d="M1130,750 L1680,750 L1680,1740 L1100,1740" stroke="#A78BFA" stroke-width="2.3" stroke-dasharray="5,5" fill="none" marker-end="url(#m-violet)"/>
+    <text class="edge-label" x="1560" y="738" fill="#A78BFA">lookup</text>
+
+    <!-- account/view logger -> user-view db (right trunk) -->
+    <path d="M1600,500 L1680,500 L1680,1975 L1550,1975" stroke="#64748B" stroke-width="2.2" stroke-dasharray="5,5" fill="none" marker-end="url(#m-gray)"/>
+    <text class="edge-label" x="1560" y="700" fill="#94A3B8">logs views</text>
+
+    <!-- cache hit -> relational db (reads existing scrolls, teal dashed, left trunk) -->
+    <path d="M150,830 L150,870 L20,870 L20,1740 L100,1740" stroke="#2DD4BF" stroke-width="2.3" stroke-dasharray="5,5" fill="none" marker-end="url(#m-teal)"/>
+    <text class="edge-label" x="24" y="1300" fill="#2DD4BF" transform="rotate(-90 24 1300)">reads</text>
+
+    <!-- local storage <-> account (sync) -->
+    <path d="M380,2110 L380,1860" stroke="#2DD4BF" stroke-width="2.3" stroke-dasharray="5,5" fill="none" marker-end="url(#m-teal)"/>
+    <text class="edge-label" x="392" y="1990" fill="#2DD4BF">sync</text>
+  </svg>
+
+  <!-- ================= CLIENT LAYER ================= -->
+  <div class="box client" style="left:560px;top:0px;width:300px;height:100px;">
+    <span class="tag">Client</span>
+    <h3>Mobile App</h3>
+    <p>Same backend API as the web app. Renders the scroll feed, session/account state, local save cache.</p>
+  </div>
+  <div class="box client" style="left:940px;top:0px;width:300px;height:100px;">
+    <span class="tag">Client</span>
+    <h3>Web App</h3>
+    <p>Same backend API as the mobile app. Renders the scroll feed, session/account state, local save cache.</p>
+  </div>
+
+  <!-- ================= GATEWAY ================= -->
+  <div class="box gateway" style="left:630px;top:200px;width:500px;height:90px;">
+    <span class="tag">Entry point</span>
+    <h3>Common Backend API Gateway</h3>
+    <p>Single entry for both clients. Routes requests; hands off auth (login/signup).</p>
+  </div>
+
+  <!-- ================= SERVING BAND ================= -->
+  <div class="band" style="left:50px;top:380px;width:1660px;height:250px;border-color:rgba(129,140,248,0.4);"></div>
+  <div class="band-label" style="left:70px;top:392px;color:#A5B4FC;">Serving / Read Service</div>
+
+  <div class="box serving" style="left:100px;top:430px;width:460px;height:140px;">
+    <span class="tag">Serving service</span>
+    <h3>Feed Orchestrator</h3>
+    <p>Receives a field-of-interest request. Coordinates candidate-topic generation, the cache lookup, and streaming scrolls back to the client.</p>
+  </div>
+
+  <div class="box serving" style="left:620px;top:430px;width:460px;height:140px;">
+    <span class="tag">Serving service · LLM agent</span>
+    <h3>Candidate Topic Generator</h3>
+    <p>In: a field name. Out: candidate topic names for that field — e.g. "Java Collections" → HashMap, TreeSet, LinkedHashSet…</p>
+  </div>
+
+  <div class="box serving" style="left:1140px;top:430px;width:460px;height:140px;">
+    <span class="tag">Serving service</span>
+    <h3>Account, Saves &amp; View Logger</h3>
+    <p>Login/signup. Reads/writes <code>saved_scroll_ids[]</code> on the account. Logs every scroll impression.</p>
+  </div>
+
+  <!-- ================= DECISION ================= -->
+  <div class="box decision" style="left:630px;top:690px;width:500px;height:120px;">
+    <span class="tag">Decision · strict-threshold match</span>
+    <h3>Topic-Name Vector DB Lookup</h3>
+    <p>Embeds each candidate name, searches the Topic-Name Vector DB. v1: name-embedding similarity only — no meaning-disambiguation yet.</p>
+  </div>
+
+  <div class="box success" style="left:90px;top:690px;width:460px;height:140px;">
+    <span class="tag">Match found</span>
+    <h3>Reuse: Link + Serve</h3>
+    <p>Adds a Field↔Topic link to the existing topic (no new row). Fetches its scrolls and streams them immediately — generation pipeline is never invoked.</p>
+  </div>
+
+  <!-- ================= GENERATION PIPELINE BAND ================= -->
+  <div class="band" style="left:50px;top:900px;width:1660px;height:580px;border-color:rgba(245,158,11,0.35);"></div>
+  <div class="band-label" style="left:70px;top:912px;color:#FCD34D;">Generation Pipeline Service — async, triggered on cache miss</div>
+
+  <div class="box scraper" style="left:140px;top:960px;width:460px;height:140px;">
+    <span class="tag">Non-LLM · scraper / parser</span>
+    <h3>Web Scraping Agent(s)</h3>
+    <p>Pulls raw source material on the topic from the web. Out: scraped snippets + source URLs — kept as grounding context, never served verbatim.</p>
+  </div>
+
+  <div class="box agent" style="left:650px;top:960px;width:460px;height:140px;">
+    <span class="tag">LLM agent</span>
+    <h3>LLM Data-Generation Agent</h3>
+    <p>Generates supplementary explanatory content for the topic, filling gaps the scraped material alone may miss.</p>
+  </div>
+
+  <div class="box agent" style="left:630px;top:1140px;width:500px;height:130px;">
+    <span class="tag">LLM agent</span>
+    <h3>Card Generation LLM</h3>
+    <p>Combines scraped + generated material, writes multiple one-page draft cards (scrolls) for the topic — original text, not republished scrape.</p>
+  </div>
+
+  <div class="box agent" style="left:630px;top:1320px;width:500px;height:130px;">
+    <span class="tag">LLM agent</span>
+    <h3>Fact-Check Agent</h3>
+    <p>Verifies each draft card against the source material before it can reach a user.</p>
+  </div>
+
+  <div class="box fail" style="left:200px;top:1320px;width:380px;height:130px;">
+    <span class="tag">Fail</span>
+    <h3>Fails Check → Deleted</h3>
+    <p>Card is discarded outright. No retry / re-queue in v1.</p>
+  </div>
+
+  <div class="box success" style="left:1180px;top:1320px;width:480px;height:130px;">
+    <span class="tag">Pass</span>
+    <h3>Passes Check → Persist + Stream</h3>
+    <p>Saved and streamed to the client as soon as ready — no waiting on the rest of the batch. New topics get embedded into the Topic-Name Vector DB + linked to the field.</p>
+  </div>
+
+  <!-- ================= DATA STORE BAND ================= -->
+  <div class="band" style="left:50px;top:1560px;width:1660px;height:520px;border-color:rgba(16,185,129,0.3);"></div>
+  <div class="band-label" style="left:70px;top:1572px;color:#6EE7B7;">Data Stores</div>
+
+  <div class="box reldb" style="left:100px;top:1620px;width:560px;height:240px;">
+    <span class="tag">Relational DB</span>
+    <h3>Core Tables</h3>
+    <ul>
+      <li>Field { id, name }</li>
+      <li>Topic { id, name, description }</li>
+      <li>Field_Topic { field_id, topic_id } — junction</li>
+      <li>Scroll { id, topic_id, content, source_url, trust_label }</li>
+      <li>Account { id, email, saved_scroll_ids[] }</li>
+    </ul>
+  </div>
+
+  <div class="box vecdb" style="left:720px;top:1620px;width:380px;height:240px;">
+    <span class="tag">Vector DB #1</span>
+    <h3>Topic-Name Vector DB</h3>
+    <p>{ topic_id, name+description embedding }</p>
+    <p style="margin-top:6px;">Used for: dedup / reuse check at generation time (strict threshold, v1).</p>
+  </div>
+
+  <div class="box vecdb" style="left:1180px;top:1620px;width:440px;height:240px;">
+    <span class="tag">Vector DB #2</span>
+    <h3>Scroll-Content Vector DB</h3>
+    <p>{ scroll_id, topic_id, content embedding }</p>
+    <p style="margin-top:6px;">Used for: semantic search, future "more like this" / recommendations.</p>
+  </div>
+
+  <div class="box reldb" style="left:750px;top:1900px;width:800px;height:150px;">
+    <span class="tag">View-tracking DB</span>
+    <h3>User-View DB</h3>
+    <p>{ user_id, scroll_id, viewed_at } — impression log. Foundation for any future resurfacing / spaced-repetition logic (not built yet).</p>
+  </div>
+
+  <!-- ================= LOCAL STORAGE ================= -->
+  <div class="box client" style="left:100px;top:2110px;width:560px;height:120px;">
+    <span class="tag">Client-side / local</span>
+    <h3>Local Storage (device cache)</h3>
+    <p>Cached saved-scroll IDs for offline/instant access. Syncs with <code>Account.saved_scroll_ids</code>.</p>
+  </div>
+
+  <!-- ================= INFRA / CROSS-CUTTING BAND ================= -->
+  <div class="band" style="left:50px;top:2270px;width:1660px;height:230px;border-color:rgba(148,163,184,0.35);"></div>
+  <div class="band-label" style="left:70px;top:2282px;color:#CBD5E1;">Cross-cutting — wraps the whole system, not a pipeline step</div>
+
+  <div class="box infra" style="left:100px;top:2320px;width:500px;height:140px;">
+    <span class="tag">Quality</span>
+    <h3>Testing</h3>
+    <p>Unit + integration testing. Browser/E2E testing via Selenium / Playwright.</p>
+  </div>
+
+  <div class="box infra" style="left:630px;top:2320px;width:500px;height:140px;">
+    <span class="tag">Deployment</span>
+    <h3>Docker + Kubernetes</h3>
+    <p>Containerized services, deployed and orchestrated independently — matches the split-service design above.</p>
+  </div>
+
+  <div class="box infra" style="left:1160px;top:2320px;width:470px;height:140px;">
+    <span class="tag">Observability</span>
+    <h3>Monitoring &amp; Maintenance</h3>
+    <p>Prometheus for metrics collection, Grafana for dashboards/alerting.</p>
+  </div>
+
+</div>
+</div>
+
+</body>
+</html>

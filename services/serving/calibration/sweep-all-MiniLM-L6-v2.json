@@ -1,0 +1,571 @@
+{
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "url": "http://localhost:8083",
+  "dims": 384,
+  "separable": false,
+  "maxDifferent": 0.8286266251307783,
+  "minSame": 0.595712843365809,
+  "chosen": 0.83,
+  "mergedAtChosen": 8,
+  "pairs": [
+    {
+      "a": {
+        "field": "Java Utils",
+        "name": "HashMap"
+      },
+      "b": {
+        "field": "Java Collections",
+        "name": "HashMap"
+      },
+      "same": true,
+      "why": "identical concept under two field names - the reuse case the design exists for",
+      "similarity": 0.8586331944339488
+    },
+    {
+      "a": {
+        "field": "Java Utils",
+        "name": "ArrayList"
+      },
+      "b": {
+        "field": "Java Collections",
+        "name": "ArrayList"
+      },
+      "same": true,
+      "why": "identical concept, independently described",
+      "similarity": 0.7764344539891901
+    },
+    {
+      "a": {
+        "field": "Java Utils",
+        "name": "ConcurrentHashMap"
+      },
+      "b": {
+        "field": "Java Collections",
+        "name": "ConcurrentHashMap"
+      },
+      "same": true,
+      "why": "identical concept, independently described",
+      "similarity": 0.9847348868784437
+    },
+    {
+      "a": {
+        "field": "Java Utils",
+        "name": "Comparator"
+      },
+      "b": {
+        "field": "Java Collections",
+        "name": "Comparator"
+      },
+      "same": true,
+      "why": "identical concept, independently described",
+      "similarity": 0.7670285881367015
+    },
+    {
+      "a": {
+        "field": "Data Structures",
+        "name": "Linked List"
+      },
+      "b": {
+        "field": "Java Collections",
+        "name": "LinkedList"
+      },
+      "same": true,
+      "why": "same concept, spelled with and without a space",
+      "similarity": 0.6192731247801588
+    },
+    {
+      "a": {
+        "field": "Data Structures",
+        "name": "Linked List"
+      },
+      "b": {
+        "field": "Data Structures and Algorithms",
+        "name": "Linked List"
+      },
+      "same": true,
+      "why": "same concept across two related fields",
+      "similarity": 0.7935976336499214
+    },
+    {
+      "a": {
+        "field": "Java Collections",
+        "name": "LinkedList"
+      },
+      "b": {
+        "field": "Data Structures and Algorithms",
+        "name": "Linked List"
+      },
+      "same": true,
+      "why": "language-specific name for the general concept",
+      "similarity": 0.6632593168321247
+    },
+    {
+      "a": {
+        "field": "Java Collections",
+        "name": "Queue"
+      },
+      "b": {
+        "field": "Data Structures",
+        "name": "Queue"
+      },
+      "same": true,
+      "why": "same concept, though the Java description is sloppier",
+      "similarity": 0.595712843365809
+    },
+    {
+      "a": {
+        "field": "Data Structures",
+        "name": "Red-Black Tree"
+      },
+      "b": {
+        "field": "Data Structures and Algorithms",
+        "name": "Red-Black Tree"
+      },
+      "same": true,
+      "why": "same concept across two related fields",
+      "similarity": 0.971720870843292
+    },
+    {
+      "a": {
+        "field": "Data Structures",
+        "name": "Balanced Tree"
+      },
+      "b": {
+        "field": "Data Structures and Algorithms",
+        "name": "Balanced Tree"
+      },
+      "same": true,
+      "why": "same concept, near-identical wording",
+      "similarity": 0.9938797085640406
+    },
+    {
+      "a": {
+        "field": "Data Structures",
+        "name": "Union-Find"
+      },
+      "b": {
+        "field": "Data Structures and Algorithms",
+        "name": "Union-Find"
+      },
+      "same": true,
+      "why": "same concept, near-identical wording",
+      "similarity": 0.9772065484433513
+    },
+    {
+      "a": {
+        "field": "Data Structures",
+        "name": "Segment Tree"
+      },
+      "b": {
+        "field": "Data Structures and Algorithms",
+        "name": "Segment Tree"
+      },
+      "same": true,
+      "why": "same concept across two related fields",
+      "similarity": 0.9176451657603223
+    },
+    {
+      "a": {
+        "field": "Data Structures",
+        "name": "Hash Table"
+      },
+      "b": {
+        "field": "Java Collections",
+        "name": "HashMap"
+      },
+      "same": true,
+      "why": "hard case: the general structure and its Java implementation - reuse here is correct and desirable",
+      "similarity": 0.8000896579664006
+    },
+    {
+      "a": {
+        "field": "Data Structures",
+        "name": "Hash Table"
+      },
+      "b": {
+        "field": "Java Utils",
+        "name": "HashMap"
+      },
+      "same": true,
+      "why": "same hard case from the other Java field",
+      "similarity": 0.9418156782514978
+    },
+    {
+      "a": {
+        "field": "Marine Biology",
+        "name": "Biological Diversity"
+      },
+      "b": {
+        "field": "Marine Biology",
+        "name": "Marine Biodiversity"
+      },
+      "same": true,
+      "why": "the generator produced one concept twice within a single field",
+      "similarity": 0.8906450469145283
+    },
+    {
+      "a": {
+        "field": "Data Structures and Algorithms",
+        "name": "Binary Search"
+      },
+      "b": {
+        "field": "Data Structures",
+        "name": "Binary Search Tree"
+      },
+      "same": false,
+      "why": "an algorithm and a data structure; the names differ by one word",
+      "similarity": 0.5941792315989803
+    },
+    {
+      "a": {
+        "field": "Data Structures",
+        "name": "Binary Tree"
+      },
+      "b": {
+        "field": "Data Structures",
+        "name": "Binary Search Tree"
+      },
+      "same": false,
+      "why": "a binary tree has no ordering guarantee; merging them loses the property that matters",
+      "similarity": 0.8267703810992673
+    },
+    {
+      "a": {
+        "field": "Data Structures",
+        "name": "Hash Table"
+      },
+      "b": {
+        "field": "Data Structures and Algorithms",
+        "name": "Hash Collision"
+      },
+      "same": false,
+      "why": "a structure and a failure mode within it",
+      "similarity": 0.6187954328583957
+    },
+    {
+      "a": {
+        "field": "Data Structures and Algorithms",
+        "name": "Time Complexity"
+      },
+      "b": {
+        "field": "Data Structures and Algorithms",
+        "name": "Space Complexity"
+      },
+      "same": false,
+      "why": "descriptions differ by one word (time vs memory) and the concepts are distinct",
+      "similarity": 0.8116595731430185
+    },
+    {
+      "a": {
+        "field": "Data Structures and Algorithms",
+        "name": "Breadth-First Search"
+      },
+      "b": {
+        "field": "Data Structures and Algorithms",
+        "name": "Depth-First Search"
+      },
+      "same": false,
+      "why": "opposite traversal orders, near-identical phrasing",
+      "similarity": 0.7952371275055211
+    },
+    {
+      "a": {
+        "field": "Data Structures",
+        "name": "Queue"
+      },
+      "b": {
+        "field": "Data Structures",
+        "name": "Stack"
+      },
+      "same": false,
+      "why": "FIFO vs LIFO - the textbook pair whose descriptions differ by one word",
+      "similarity": 0.7903612458920499
+    },
+    {
+      "a": {
+        "field": "Java Collections",
+        "name": "Queue"
+      },
+      "b": {
+        "field": "Java Collections",
+        "name": "Deque"
+      },
+      "same": false,
+      "why": "distinct interfaces, and the generator gave Queue a description that reads like Deque's",
+      "similarity": 0.7197896005072099
+    },
+    {
+      "a": {
+        "field": "Java Collections",
+        "name": "HashSet"
+      },
+      "b": {
+        "field": "Java Collections",
+        "name": "HashMap"
+      },
+      "same": false,
+      "why": "a set and a map; both hash-based, both fast lookups",
+      "similarity": 0.7369005728670244
+    },
+    {
+      "a": {
+        "field": "Java Collections",
+        "name": "TreeSet"
+      },
+      "b": {
+        "field": "Java Collections",
+        "name": "TreeMap"
+      },
+      "same": false,
+      "why": "set vs map, both red-black-tree backed and described almost identically",
+      "similarity": 0.71384215159772
+    },
+    {
+      "a": {
+        "field": "Java Collections",
+        "name": "Comparable"
+      },
+      "b": {
+        "field": "Java Collections",
+        "name": "Comparator"
+      },
+      "same": false,
+      "why": "natural ordering vs external ordering - the classic Java confusion",
+      "similarity": 0.8286266251307783
+    },
+    {
+      "a": {
+        "field": "Java Collections",
+        "name": "List"
+      },
+      "b": {
+        "field": "Java Collections",
+        "name": "Set"
+      },
+      "same": false,
+      "why": "ordered with duplicates vs unordered unique",
+      "similarity": 0.6728212562846301
+    },
+    {
+      "a": {
+        "field": "Frontend Frameworks",
+        "name": "Service"
+      },
+      "b": {
+        "field": "Web Development",
+        "name": "Servlet"
+      },
+      "same": false,
+      "why": "similar names, unrelated concepts, in different fields",
+      "similarity": 0.3531601001781633
+    },
+    {
+      "a": {
+        "field": "Frontend Frameworks",
+        "name": "Template"
+      },
+      "b": {
+        "field": "Web Development",
+        "name": "JSP"
+      },
+      "same": false,
+      "why": "both concern generating markup, but one is a framework concept and one a Java technology",
+      "similarity": 0.32368509184750954
+    },
+    {
+      "a": {
+        "field": "Frontend Frameworks",
+        "name": "Module"
+      },
+      "b": {
+        "field": "Web Development",
+        "name": "Webpack"
+      },
+      "same": false,
+      "why": "a unit of organisation vs a specific bundler",
+      "similarity": 0.3732271632556916
+    },
+    {
+      "a": {
+        "field": "Frontend Frameworks",
+        "name": "State"
+      },
+      "b": {
+        "field": "Frontend Frameworks",
+        "name": "Prop"
+      },
+      "same": false,
+      "why": "internal data vs data passed in - distinct and routinely confused",
+      "similarity": 0.5334988348558944
+    },
+    {
+      "a": {
+        "field": "Frontend Frameworks",
+        "name": "Observable"
+      },
+      "b": {
+        "field": "Frontend Frameworks",
+        "name": "Subscription"
+      },
+      "same": false,
+      "why": "a stream and the link that consumes it",
+      "similarity": 0.674567531784395
+    },
+    {
+      "a": {
+        "field": "Behavioural Economics",
+        "name": "Loss Aversion"
+      },
+      "b": {
+        "field": "Behavioural Economics",
+        "name": "Endowment Effect"
+      },
+      "same": false,
+      "why": "related and frequently discussed together, but separate named effects",
+      "similarity": 0.49918268734053
+    },
+    {
+      "a": {
+        "field": "Behavioural Economics",
+        "name": "Anchoring"
+      },
+      "b": {
+        "field": "Behavioural Economics",
+        "name": "Framing Effect"
+      },
+      "same": false,
+      "why": "both about presentation influencing decisions; distinct effects",
+      "similarity": 0.5527659524323768
+    },
+    {
+      "a": {
+        "field": "Behavioural Economics",
+        "name": "Present Bias"
+      },
+      "b": {
+        "field": "Behavioural Economics",
+        "name": "Status Quo Bias"
+      },
+      "same": false,
+      "why": "distinct biases with similarly-shaped descriptions",
+      "similarity": 0.591844470074694
+    },
+    {
+      "a": {
+        "field": "Marine Biology",
+        "name": "Marine Zoology"
+      },
+      "b": {
+        "field": "Marine Biology",
+        "name": "Marine Botany"
+      },
+      "same": false,
+      "why": "animals vs plants, descriptions identical apart from that word",
+      "similarity": 0.6852415264430594
+    },
+    {
+      "a": {
+        "field": "Marine Biology",
+        "name": "Marine Pollution"
+      },
+      "b": {
+        "field": "Marine Biology",
+        "name": "Marine Toxicology"
+      },
+      "same": false,
+      "why": "the contamination and the study of its effects",
+      "similarity": 0.7634731089945825
+    },
+    {
+      "a": {
+        "field": "Marine Biology",
+        "name": "Ocean Currents"
+      },
+      "b": {
+        "field": "Marine Biology",
+        "name": "Marine Climate Interactions"
+      },
+      "same": false,
+      "why": "a physical process and the study of climate coupling",
+      "similarity": 0.4573979610988254
+    },
+    {
+      "a": {
+        "field": "Data Structures and Algorithms",
+        "name": "Recursion"
+      },
+      "b": {
+        "field": "Data Structures and Algorithms",
+        "name": "Dynamic Programming"
+      },
+      "same": false,
+      "why": "both decompose problems into smaller ones; distinct techniques",
+      "similarity": 0.3706532195372119
+    },
+    {
+      "a": {
+        "field": "Web Development",
+        "name": "OAuth"
+      },
+      "b": {
+        "field": "Web Development",
+        "name": "JWT"
+      },
+      "same": false,
+      "why": "an authorisation framework vs a token format",
+      "similarity": 0.4450117476693741
+    },
+    {
+      "a": {
+        "field": "Web Development",
+        "name": "HTML"
+      },
+      "b": {
+        "field": "Web Development",
+        "name": "CSS"
+      },
+      "same": false,
+      "why": "easy negative with very short descriptions, which is its own test",
+      "similarity": 0.6753130946905841
+    },
+    {
+      "a": {
+        "field": "Java Collections",
+        "name": "HashMap"
+      },
+      "b": {
+        "field": "Marine Biology",
+        "name": "Marine Ecology"
+      },
+      "same": false,
+      "why": "unrelated fields - anchors the floor",
+      "similarity": 0.05553447833770545
+    },
+    {
+      "a": {
+        "field": "Data Structures",
+        "name": "Stack"
+      },
+      "b": {
+        "field": "Behavioural Economics",
+        "name": "Nudge"
+      },
+      "same": false,
+      "why": "unrelated fields - anchors the floor",
+      "similarity": 0.16065994318475998
+    },
+    {
+      "a": {
+        "field": "Web Development",
+        "name": "React"
+      },
+      "b": {
+        "field": "Marine Biology",
+        "name": "Coral Reef Structure"
+      },
+      "same": false,
+      "why": "unrelated fields - anchors the floor",
+      "similarity": -0.0020891844331523664
+    }
+  ]
+}
