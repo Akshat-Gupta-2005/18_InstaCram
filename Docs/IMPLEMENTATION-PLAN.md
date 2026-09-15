@@ -164,6 +164,8 @@ This is the highest-uncertainty component in the system and the plan currently b
 
 **Done when** there is an answer and a number: how many of 10 topics yielded usable material, and from what kinds of source. If the answer is poor, the fallback options are real and should be chosen here rather than improvised: lean harder on the LLM data-generation agent with the scrape as optional enrichment, or narrow v1 to fields with reliably scrapable sources, or use a search API rather than direct scraping. **Also settle robots.txt and terms-of-service handling here** — it is on the open items list and this is the moment it becomes concrete.
 
+**DONE, 2026-09-15 — and it answered a question it was not asked.** Retrieval: **10/10 usable** over plain HTTP, median 22,816 chars in 1.1s, so **Playwright is not needed for this source** and the browser question is settled. Relevance: **much worse.** Four Java topics (*TreeSet*, *ArrayList*, *ConcurrentSkipListMap*, *LinkedHashMap*) matched one identical article at 22,789 chars each, and *HashMap* matched *Hash table*; all 5 Behavioural Economics topics matched well. Direct title lookups confirmed the cause is not query tuning — three of those classes have **no Wikipedia article at all**, and two redirect to general CS concepts. This inverts the spike's own hypothesis that non-technical sourcing would be the thin side. The three chosen fixes land in 8a below, and the mismatch record is migration `007`. See P26.
+
 ---
 
 ## 8. W4 — The pipeline, one topic end to end
@@ -175,6 +177,9 @@ Phase P3. The largest package; split internally so it does not become one long u
 | # | Task | Done when |
 |---|---|---|
 | 4a.1 | Web Scraping Agent | Topic name → snippets + source URLs, run standalone |
+| 4a.1b | **Relevance check**: compare the returned article title against the requested topic | Below the bar, the topic is marked unsourceable and a row is written to `unsourced_topic` — never generated from wrong grounding. The fact-check gate cannot catch this, because generic text is not *false* (P26) |
+| 4a.1c | **Second source** for topics an encyclopedia lacks at class granularity (official docs / Javadoc / MDN) | A *Java Collections* topic returns a page about that class, not the framework overview. Its own robots.txt and ToS check (P26) |
+| 4a.1d | **Section-level extraction** when several topics share one article | *TreeSet* grounds on the TreeSet section, not the whole 22,789-char page; degrades cleanly to 4a.1b when no section matches (P26) |
 | 4a.2 | LLM Data-Generation Agent | Topic name → supplementary content, run standalone |
 | 4a.3 | Card Generation LLM | Scraped + generated → N one-page drafts |
 | 4a.4 | Fact-Check Agent | Draft + sources → pass/fail + reason |
@@ -262,12 +267,12 @@ Not a ceremony — these are the four moments where something is learned that ca
 
 ## 12. Start here
 
-W0, W1, W2, W2b and W3 are done. Task 0.5 is closed — both Qdrant collections exist at 768 dims / Cosine. Two carve-outs remain: task 2b.1 (Firebase verification) waits on credentials, with auth running as a dev stub until then, and the scraper spike waits on a contact URL.
+W0, W1, W2, W2b, W3 **and the scraper spike** are done. Task 0.5 is closed — both Qdrant collections exist at 768 dims / Cosine. One carve-out remains: task 2b.1 (Firebase verification) waits on credentials, with auth running as a dev stub until then.
 
 **W3's result:** `intfloat/e5-base-v2` at threshold `0.955`, and the §6.2 go/no-go **passed** — strict-threshold-only matching is viable, at a measured cost of roughly a third of identical topics regenerating as duplicates. Task 3.4 (the Qdrant write + search path) is the one piece carried forward into W4.
 
 Next:
 
-1. **W4: the pipeline.** The five steps, the fact-check gate with its counters and quarantine, the outbox worker, and `reindex`. The scraper is its one real unknown, and the spike that answers it needs only a contact URL to finish.
+1. **W4: the pipeline.** The five steps, the fact-check gate with its counters and quarantine, the outbox worker, and `reindex`. The scraper's unknown is now measured rather than open: retrieval works over plain HTTP with no browser, but sourcing *relevance* does not, so 4a.1b–4a.1d carry the three fixes. Start with 4a.1b — it is the cheapest, and until it exists every later step can be fed grounding that is about the wrong thing.
 2. **W5's wiring**, which needs W4. Today an unknown field reports `exhausted`, because nothing generates. W5 makes it queue work and report `generating` instead, and adds `POST /v1/fields/{id}/expand` — the endpoint the end-of-field card's "more topics" action calls.
 3. **W6 (client)** stays blocked on the framework choice, and nothing before it depends on one.

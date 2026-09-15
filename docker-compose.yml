@@ -68,6 +68,16 @@ services:
       EMBEDDINGS_URL: http://embeddings:80
       LLM_GATEWAY_URL: http://llm-gateway:4000
       PORT: 3000
+      # Forwarded explicitly. Compose reads the root .env for ${VAR} substitution
+      # in THIS file, but that does not put anything inside a container - without
+      # these lines, tuning the threshold in .env would change host runs and leave
+      # containers on the code default, with no error to notice.
+      AUTH_MODE: ${AUTH_MODE:-dev}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-768}
+      EMBEDDING_TEXT_PREFIX: ${EMBEDDING_TEXT_PREFIX:-}
+      TOPIC_MATCH_THRESHOLD: ${TOPIC_MATCH_THRESHOLD:-0.955}
+      FEED_PAGE_SIZE: ${FEED_PAGE_SIZE:-10}
+      FEED_RETRY_AFTER_MS: ${FEED_RETRY_AFTER_MS:-3000}
     ports:
       - "${SERVING_PORT:-3000}:3000"
     depends_on:
@@ -89,6 +99,15 @@ services:
       EMBEDDINGS_URL: http://embeddings:80
       LLM_GATEWAY_URL: http://llm-gateway:4000
       PORT: 8000
+      # Same reason as serving: the embedded-text prefix and the threshold must
+      # match on both sides, or vectors written here would not match vectors
+      # searched there.
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-768}
+      EMBEDDING_TEXT_PREFIX: ${EMBEDDING_TEXT_PREFIX:-}
+      TOPIC_MATCH_THRESHOLD: ${TOPIC_MATCH_THRESHOLD:-0.955}
+      # Real contact for the scraper's User-Agent. Empty here means Wikimedia
+      # answers 403; it is never committed.
+      SCRAPER_CONTACT: ${SCRAPER_CONTACT:-}
     ports:
       - "${PIPELINE_PORT:-8000}:8000"
     depends_on:

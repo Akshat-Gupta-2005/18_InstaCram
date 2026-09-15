@@ -25,9 +25,16 @@ import time
 import urllib.robotparser
 from collections import Counter
 from dataclasses import dataclass
+from pathlib import Path
 from urllib.parse import quote, urlparse
 
 import httpx
+from dotenv import load_dotenv
+
+# The ONE .env lives at the repo root. This script runs with services/pipeline as
+# its working directory, so a bare load_dotenv() would look in the wrong place and
+# silently find nothing - leaving SCRAPER_CONTACT empty and every request a 403.
+load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 # A real mix: well-documented technical topics, and non-technical ones, because
 # the product claims to work for both and the second kind is where sourcing is

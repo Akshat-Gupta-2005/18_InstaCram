@@ -5,7 +5,7 @@
  * there, because that would silently discard every vector in it. Rebuilding after
  * a model change is `reindex`'s job, not this one's.
  */
-import "dotenv/config";
+import "../env.js";
 import { config } from "../config.js";
 import {
   collectionInfo,

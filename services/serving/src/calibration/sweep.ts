@@ -16,7 +16,7 @@
  * same model before it was spotted. SWEEP_URL and SWEEP_LABEL work too, and are
  * the safer option in any shell.
  */
-import "dotenv/config";
+import "../env.js";
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

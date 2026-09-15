@@ -7,7 +7,7 @@
  * own one-line descriptions. Output is committed so the later sweep is
  * reproducible and so the labels stay attached to the exact text they describe.
  */
-import "dotenv/config";
+import "../env.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

@@ -8,7 +8,7 @@
  *   - an `empty` topic               -> a run where every draft failed
  *   - a retired card                 -> must never appear anywhere
  */
-import "dotenv/config";
+import "./env.js";
 import type { PoolClient } from "pg";
 import { pool } from "./db/pool.js";
 

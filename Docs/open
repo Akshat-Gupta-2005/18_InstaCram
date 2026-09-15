@@ -1,0 +1,23 @@
+Open decisions
+Blocking something specific:
+
+Decision	Blocks
+Which LLM (above)	every W4 agent — nothing LLM-touching runs right now
+Firebase credentials	task 2b.1. AUTH_MODE=dev trusts the bearer token as identity; anything network-reachable is wide open
+Frontend framework — React Native/Expo + Next.js were inferred from prior projects, never agreed	all of W6
+Needed during W4:
+
+Decision	Why it matters
+What the feed shows when a topic resolves to empty	skipping silently is a choice, not a default
+Ollama keep_alive	~160s cold reload vs ~3s warm, against ~5 GB RAM held permanently — and cold start is exactly the path the feed design is most sensitive to
+Whether the fact-check agent gets thinking mode back	deferred from P23 to be settled by measurement; W4 ships the counters that make it measurable
+robots.txt / ToS handling per source	the spike checks Wikipedia; task 4a.1c adds a second source with its own terms
+Open but not urgent:
+
+Add a true polysemy pair to the labelled set — the designed "Stack" collision never appeared, so 0.955 rests on same-family pairs only
+Put this directory under git — the remote exists and returns 200, but the local copy isn't a working tree, so ci.yml has never run
+Commit the advisory-lock test as a real script (the 7.6s figure came from an ad-hoc one)
+Re-check GKE/EKS pricing against an actual bill before acting on it
+Recently closed, for contrast: embedding model + threshold, the P4 go/no-go, scraper contact, scraper viability, sourcing strategy (the three fixes), and the mismatch-log mechanism.
+
+My recommendation is option 1 — pull qwen3:8b. It costs a download and nothing else, and it keeps the recorded W3 results honest rather than leaving documentation describing a model the machine no longer has. Say the word and I'll pull it and re-run the gateway smoke test.

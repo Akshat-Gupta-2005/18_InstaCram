@@ -1,0 +1,101 @@
+{
+  "_comment": [
+    "Topics whose scrape did NOT return an article about the topic itself.",
+    "",
+    "GENERATED FILE - do not edit by hand. Regenerate with:",
+    "    cd services/pipeline && .venv/Scripts/python scripts/export_unsourced.py",
+    "The unsourced_topic table is the record; this is a snapshot of it.",
+    "",
+    "WHY THIS EXISTS: the scraper spike reported 10/10 success while four Java",
+    "topics were all grounded on one identical article. The success metric was",
+    "'more than 500 characters', which cannot tell the right article from a wrong",
+    "one of the same length. This is the record that metric could not keep.",
+    "See Docs/DECISIONS.md P26.",
+    "",
+    "KINDS:",
+    "  no_article - the source has no page for this topic at all",
+    "  generic    - the source returned a broader page that subsumes the topic",
+    "",
+    "WHAT IT IS FOR: deciding which sources a field needs. A field whose topics",
+    "cluster here does not need better search - it needs a different source."
+  ],
+  "total": 6,
+  "by_field": {
+    "Java Collections": 5,
+    "Behavioural Economics": 1
+  },
+  "entries": [
+    {
+      "topic": "Availability heuristic",
+      "field": "Behavioural Economics",
+      "source": "wikipedia",
+      "matched_title": "Heuristic",
+      "kind": "generic",
+      "chars": 19400,
+      "times_detected": 1,
+      "first_detected_at": "2026-09-15",
+      "last_detected_at": "2026-09-15",
+      "note": "The only non-technical mismatch. Wikipedia DOES have an \"Availability heuristic\" article, so unlike the Java cases this one is fixable by better querying."
+    },
+    {
+      "topic": "ArrayList",
+      "field": "Java Collections",
+      "source": "wikipedia",
+      "matched_title": "Java collections framework",
+      "kind": "generic",
+      "chars": 22789,
+      "times_detected": 1,
+      "first_detected_at": "2026-09-15",
+      "last_detected_at": "2026-09-15",
+      "note": "Direct title lookup redirects to \"Dynamic array\". Same fallback article as TreeSet, byte-identical."
+    },
+    {
+      "topic": "ConcurrentSkipListMap",
+      "field": "Java Collections",
+      "source": "wikipedia",
+      "matched_title": "Java collections framework",
+      "kind": "no_article",
+      "chars": 22789,
+      "times_detected": 1,
+      "first_detected_at": "2026-09-15",
+      "last_detected_at": "2026-09-15",
+      "note": "404 on direct title lookup. Four topics sharing one source page is the clearest signal in this table."
+    },
+    {
+      "topic": "HashMap",
+      "field": "Java Collections",
+      "source": "wikipedia",
+      "matched_title": "Hash table",
+      "kind": "generic",
+      "chars": 36168,
+      "times_detected": 1,
+      "first_detected_at": "2026-09-15",
+      "last_detected_at": "2026-09-15",
+      "note": "No article titled HashMap exists (404). Returned the general data structure, not the Java class."
+    },
+    {
+      "topic": "LinkedHashMap",
+      "field": "Java Collections",
+      "source": "wikipedia",
+      "matched_title": "Java collections framework",
+      "kind": "no_article",
+      "chars": 22789,
+      "times_detected": 1,
+      "first_detected_at": "2026-09-15",
+      "last_detected_at": "2026-09-15",
+      "note": "404 on direct title lookup. Same fallback article, byte-identical."
+    },
+    {
+      "topic": "TreeSet",
+      "field": "Java Collections",
+      "source": "wikipedia",
+      "matched_title": "Java collections framework",
+      "kind": "generic",
+      "chars": 22789,
+      "times_detected": 1,
+      "first_detected_at": "2026-09-15",
+      "last_detected_at": "2026-09-15",
+      "note": "Direct title lookup redirects to \"Set (abstract data type)\". Search fell back to the framework overview."
+    }
+  ]
+}

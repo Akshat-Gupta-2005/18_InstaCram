@@ -18,6 +18,7 @@
  * "MIGRATION FAILED" prefix, so a container that refuses to start names its cause
  * on the first line of its logs instead of looking like a broken app.
  */
+import "../env.js";
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
