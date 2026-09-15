@@ -19,11 +19,9 @@
     "WHAT IT IS FOR: deciding which sources a field needs. A field whose topics",
     "cluster here does not need better search - it needs a different source."
   ],
-  "total": 6,
-  "by_field": {
-    "Java Collections": 5,
-    "Behavioural Economics": 1
-  },
+  "open": 0,
+  "resolved": 6,
+  "by_field": {},
   "entries": [
     {
       "topic": "Availability heuristic",
@@ -32,46 +30,54 @@
       "matched_title": "Heuristic",
       "kind": "generic",
       "chars": 19400,
-      "times_detected": 1,
+      "times_detected": 3,
       "first_detected_at": "2026-09-15",
       "last_detected_at": "2026-09-15",
-      "note": "The only non-technical mismatch. Wikipedia DOES have an \"Availability heuristic\" article, so unlike the Java cases this one is fixable by better querying."
+      "resolved_at": "2026-09-15",
+      "resolved_by": "wikipedia",
+      "note": "the article 'Heuristic' is a broader category than 'Availability heuristic'; grounding on it would produce generic text; no section of it is about the topic either"
     },
     {
       "topic": "ArrayList",
       "field": "Java Collections",
       "source": "wikipedia",
-      "matched_title": "Java collections framework",
+      "matched_title": "Dynamic array",
       "kind": "generic",
-      "chars": 22789,
-      "times_detected": 1,
+      "chars": 10227,
+      "times_detected": 3,
       "first_detected_at": "2026-09-15",
       "last_detected_at": "2026-09-15",
-      "note": "Direct title lookup redirects to \"Dynamic array\". Same fallback article as TreeSet, byte-identical."
+      "resolved_at": "2026-09-15",
+      "resolved_by": "javadoc",
+      "note": "the article 'Dynamic array' shares no containing relationship with 'ArrayList'; no section of it is about the topic either"
     },
     {
       "topic": "ConcurrentSkipListMap",
       "field": "Java Collections",
       "source": "wikipedia",
       "matched_title": "Java collections framework",
-      "kind": "no_article",
+      "kind": "generic",
       "chars": 22789,
-      "times_detected": 1,
+      "times_detected": 4,
       "first_detected_at": "2026-09-15",
       "last_detected_at": "2026-09-15",
-      "note": "404 on direct title lookup. Four topics sharing one source page is the clearest signal in this table."
+      "resolved_at": "2026-09-15",
+      "resolved_by": "javadoc",
+      "note": "the article 'Java collections framework' shares no containing relationship with 'ConcurrentSkipListMap'; no section of it is about the topic either"
     },
     {
       "topic": "HashMap",
       "field": "Java Collections",
       "source": "wikipedia",
-      "matched_title": "Hash table",
+      "matched_title": "Java collections framework",
       "kind": "generic",
-      "chars": 36168,
-      "times_detected": 1,
+      "chars": 22789,
+      "times_detected": 3,
       "first_detected_at": "2026-09-15",
       "last_detected_at": "2026-09-15",
-      "note": "No article titled HashMap exists (404). Returned the general data structure, not the Java class."
+      "resolved_at": "2026-09-15",
+      "resolved_by": "javadoc",
+      "note": "the article 'Java collections framework' shares no containing relationship with 'HashMap'; no section of it is about the topic either"
     },
     {
       "topic": "LinkedHashMap",
@@ -83,19 +89,23 @@
       "times_detected": 1,
       "first_detected_at": "2026-09-15",
       "last_detected_at": "2026-09-15",
+      "resolved_at": "2026-09-15",
+      "resolved_by": "javadoc",
       "note": "404 on direct title lookup. Same fallback article, byte-identical."
     },
     {
       "topic": "TreeSet",
       "field": "Java Collections",
       "source": "wikipedia",
-      "matched_title": "Java collections framework",
+      "matched_title": "Set (abstract data type)",
       "kind": "generic",
-      "chars": 22789,
-      "times_detected": 1,
+      "chars": 17314,
+      "times_detected": 4,
       "first_detected_at": "2026-09-15",
       "last_detected_at": "2026-09-15",
-      "note": "Direct title lookup redirects to \"Set (abstract data type)\". Search fell back to the framework overview."
+      "resolved_at": "2026-09-15",
+      "resolved_by": "javadoc",
+      "note": "the article 'Set (abstract data type)' is a broader category than 'TreeSet'; grounding on it would produce generic text; no section of it is about the topic either"
     }
   ]
 }

@@ -51,9 +51,10 @@ HEADER_COMMENT = [
 
 QUERY = """
 SELECT topic_name, field_name, source, matched_title, kind, chars,
-       times_detected, first_detected_at, last_detected_at, note
+       times_detected, first_detected_at, last_detected_at, note,
+       resolved_at, resolved_by
 FROM unsourced_topic
-ORDER BY field_name NULLS LAST, topic_name
+ORDER BY (resolved_at IS NOT NULL), field_name NULLS LAST, topic_name
 """
 
 
@@ -80,21 +81,29 @@ async def main() -> int:
             "times_detected": r["times_detected"],
             "first_detected_at": r["first_detected_at"].date().isoformat(),
             "last_detected_at": r["last_detected_at"].date().isoformat(),
+            "resolved_at": r["resolved_at"].date().isoformat() if r["resolved_at"] else None,
+            "resolved_by": r["resolved_by"],
             "note": r["note"],
         }
         for r in rows
     ]
 
+    # Resolved rows are kept - "wikipedia could not ground HashMap, javadoc
+    # could" is the evidence that justified adding a second source - but they
+    # must not be counted, or the file reports problems that no longer exist.
+    open_entries = [e for e in entries if e["resolved_at"] is None]
+
     # Which field mismatches most is the question the table exists to answer, so the
     # export answers it up front instead of leaving it to whoever reads the entries.
     by_field: dict[str, int] = {}
-    for e in entries:
+    for e in open_entries:
         key = e["field"] or "(unknown)"
         by_field[key] = by_field.get(key, 0) + 1
 
     document = {
         "_comment": HEADER_COMMENT,
-        "total": len(entries),
+        "open": len(open_entries),
+        "resolved": len(entries) - len(open_entries),
         "by_field": dict(sorted(by_field.items(), key=lambda kv: (-kv[1], kv[0]))),
         "entries": entries,
     }
@@ -103,9 +112,9 @@ async def main() -> int:
     OUT_PATH.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
 
     print(f"wrote {OUT_PATH.relative_to(REPO_ROOT)}")
-    print(f"  {len(entries)} topic(s) across {len(by_field)} field(s)")
+    print(f"  {len(open_entries)} open, {len(entries) - len(open_entries)} resolved")
     for field, count in document["by_field"].items():
-        print(f"  {count:>3}  {field}")
+        print(f"  {count:>3} open  {field}")
     return 0
 
 

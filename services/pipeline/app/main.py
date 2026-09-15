@@ -4,19 +4,16 @@ Triggered on a cache miss, per topic. The LangGraph definition of the five steps
 lands in app/graph/ at W4; this is the W1 skeleton.
 """
 
-import os
-
 import asyncpg
-from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-load_dotenv()
+# Importing config loads the repo-root .env by explicit path. A bare
+# load_dotenv() used to live here and never found it, because this service runs
+# with services/pipeline as its working directory. See P25.
+from app.config import DATABASE_URL
 
 VERSION = "0.1.0"
-DATABASE_URL = os.environ.get(
-    "DATABASE_URL", "postgres://instacram:instacram@localhost:5432/instacram"
-)
 
 app = FastAPI(title="InstaCram Pipeline", version=VERSION)
 

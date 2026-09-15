@@ -49,13 +49,19 @@ Do NOT fail a card for:
 - style, tone, or your preference for different phrasing
 - covering a narrow aspect of the topic rather than the whole topic
 
-If you fail it, name the specific claim in "failed_claim" and say what is wrong in
-"reason". Both are read by a human diagnosing whether this checker is too strict —
-"seems inaccurate" is useless to them. Be specific enough that someone can tell
-from your reason alone whether you were right.
+Whatever you decide, say why in "reason" — for a pass, one line on what you
+checked; for a fail, what is wrong. If you fail it, also name the specific claim
+in "failed_claim". Both are read by a human diagnosing whether this checker is too
+strict — "seems inaccurate" is useless to them. Be specific enough that someone
+can tell from your reason alone whether you were right.
 
-Return JSON only.
+Return JSON only, exactly these keys:
+{"verdict": "pass" | "fail", "reason": "...", "failed_claim": "..." | null}
 ```
+
+## Why the output shape is repeated inside the prompt
+
+The `## Output` block above documents the contract for a human reader; it is **not** sent to the model, because the loader takes only the fenced block under `## Prompt`. The first live run of this agent proved why that matters: the prompt named `failed_claim` and `reason` in passing but never named `verdict`, so the model returned `{"result": "pass"}` and every card errored. Any field name that exists only in `## Output` is a field name the model has to guess. A test asserts each agent prompt names its own output keys.
 
 ## Why the "do not fail for" list is as long as the fail list
 

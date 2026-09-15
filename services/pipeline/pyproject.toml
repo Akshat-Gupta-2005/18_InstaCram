@@ -10,7 +10,28 @@ dependencies = [
     "httpx>=0.27.2",
     "pydantic>=2.9.0",
     "python-dotenv>=1.0.1",
+    # Orchestrates the pipeline's five steps and its one real branch (fact-check
+    # pass -> persist, fail -> quarantine). Pulls ~25 transitive packages,
+    # including a second HTTP stack alongside httpx; accepted deliberately, see
+    # DECISIONS.md. The agents themselves stay plain async functions so they
+    # remain runnable and testable without the graph.
+    # Pinned EXACTLY, not floored. ">=0.2.0" resolved to 1.2.11 - a major-version
+    # jump the spec silently permitted, and the next resolve could just as easily
+    # land on 2.x. The LangChain ecosystem moves fast and breaks interfaces, and
+    # this project already learned to pin rather than float: P19 pins the
+    # embeddings image because a drifting pull would silently invalidate a
+    # calibrated threshold. Same reasoning, different dependency.
+    "langgraph==1.2.11",
 ]
+
+# Without this, setuptools' flat-layout auto-discovery sees app/, spikes/ and
+# sourcing/ as three candidate packages and refuses to guess, so `pip install -e .`
+# fails outright - which would also have failed CI, since ci.yml installs the same
+# way. Only app/ is importable code; spikes/ is throwaway and sourcing/ holds a
+# generated JSON file.
+[tool.setuptools.packages.find]
+include = ["app*"]
+namespaces = true
 
 [project.optional-dependencies]
 dev = [

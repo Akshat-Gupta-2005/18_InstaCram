@@ -176,22 +176,25 @@ Phase P3. The largest package; split internally so it does not become one long u
 
 | # | Task | Done when |
 |---|---|---|
-| 4a.1 | Web Scraping Agent | Topic name → snippets + source URLs, run standalone |
-| 4a.1b | **Relevance check**: compare the returned article title against the requested topic | Below the bar, the topic is marked unsourceable and a row is written to `unsourced_topic` — never generated from wrong grounding. The fact-check gate cannot catch this, because generic text is not *false* (P26) |
-| 4a.1c | **Second source** for topics an encyclopedia lacks at class granularity (official docs / Javadoc / MDN) | A *Java Collections* topic returns a page about that class, not the framework overview. Its own robots.txt and ToS check (P26) |
-| 4a.1d | **Section-level extraction** when several topics share one article | *TreeSet* grounds on the TreeSet section, not the whole 22,789-char page; degrades cleanly to 4a.1b when no section matches (P26) |
-| 4a.2 | LLM Data-Generation Agent | Topic name → supplementary content, run standalone |
-| 4a.3 | Card Generation LLM | Scraped + generated → N one-page drafts |
-| 4a.4 | Fact-Check Agent | Draft + sources → pass/fail + reason |
+| 4a.1 | Web Scraping Agent | **DONE.** `app/agents/scraper.py` + `app/sources/`. Runs standalone via `scripts/run_scraper.py`: 5/10 grounded with source URLs, 5/10 explicitly refused |
+| 4a.1b | **Relevance check**: compare the returned article title against the requested topic | **DONE.** `app/relevance.py` — directional token containment, deterministic, no threshold to calibrate. All 6 measured mismatches rejected, all 4 measured matches kept. A rejection writes `unsourced_topic` and the topic is refused, never grounded on the wrong article (P26). Known limitation, asserted by a `strict` xfail: an abbreviation shares no tokens with its expansion |
+| 4a.1c | **Second source** for topics an encyclopedia lacks at class granularity | **DONE.** `app/sources/javadoc.py`. All four Java classes now return their own class page — *Java Collections* went 1/5 → 5/5, overall 10/10. Discovery is deterministic (class → package → module → one URL), so P26's wrong-article failure cannot occur on this source. `robots.txt` checked: the API docs are permitted. Beware the **soft 404** — the module-less URL answers 200 with the JDK home page (P28) |
+| 4a.1d | **Section-level extraction** when several topics share one article | **DONE.** *LinkedHashMap* grounds on its own **424-char section** rather than the 22,789-char page, and degrades to 4a.1b's refusal when no section matches. Section headings use the **strict sibling rule**: they are peers chosen for similarity, so containment would accept *LinkedHashMap* for *HashMap* — and did, until P27 |
+| 4a.2 | LLM Data-Generation Agent | **DONE.** `app/agents/data_gen.py`. Returns content + self-reported confidence; anything not exactly `high` is treated as low, so an invented third value cannot read as confident |
+| 4a.3 | Card Generation LLM | **DONE.** `app/agents/card_gen.py`. 4 drafts, 0 malformed on the first run. Validates every field in the agent rather than at the database, and **rejects a `source_url` the generator invented** — a fabricated link looks like provenance, and that link is the user's only way to check a fact (invariant 4) |
+| 4a.4 | Fact-Check Agent | **DONE.** `app/agents/fact_check.py`. 4/4 pass at ~7.5s each, each with a specific reason. An unrecognised verdict **raises rather than defaulting to fail** — needed on the very first run, when a prompt bug (P29) would otherwise have quarantined every card and marked the topic `empty` |
 
 Each is independently runnable and independently tested before any graph exists. 4a.1 and 4a.2 have no dependency on each other by design.
+
+**8a is COMPLETE.** `scripts/run_agents.py` runs all four for one topic: scraper + data-gen concurrently in 37s, card generation 4 drafts in 63s, fact-check 4/4 pass at ~7.5s each — roughly **130s per topic** on a local `qwen3:8b`. That is the first cost-per-topic figure, and 8d turns it into a measurement across many topics.
 
 ### 8b — Graph wiring
 
 | # | Task | Done when |
 |---|---|---|
-| 4b.1 | LangGraph definition of the 5 steps with the fact-check branch | Graph runs end to end for one topic |
-| 4b.2 | Scraper and data-gen execute **concurrently** | Wall-clock measurably below running them in sequence |
+| 4b.1 | LangGraph definition of the 5 steps with the fact-check branch | **DONE.** `app/graph/pipeline.py`, run by `scripts/run_pipeline.py`: `HashMap` → `ready`, 4 drafts, 4 passed, 121.9s. Four outcomes are kept distinguishable — `ready`, `unsourced`, `empty`, `degraded` — because "no cards" has three different causes and only one of them is the topic's fault |
+| 4b.2 | Scraper and data-gen execute **concurrently** | **DONE.** Two edges out of `START`. Asserted in `tests/test_graph.py` with 50 ms stubs: sequential would take ≥100 ms, the graph finishes under 90 ms. Measured live at 37s for the pair |
+| — | **A `join` node that does nothing** | Load-bearing despite being a no-op. LangGraph fires a node when **any** inbound edge fires, so the conditional had to sit after both branches meet or `data_gen` alone would trigger card generation for an ungrounded topic (P30) |
 
 ### 8c — Persistence, observability, consistency
 
