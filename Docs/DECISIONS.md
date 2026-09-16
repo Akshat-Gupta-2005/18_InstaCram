@@ -386,6 +386,7 @@ It also turned up something the gate is not for. Two live seed rows read *"Optio
 | 2 | `2fca4b8` | fail — `pip install -e .` | fail — `npm test` | pass |
 | 3 | `c8a990d` | **pass** | fail — `npm test` | pass |
 | 4 | `9e99c2e` | pass | fail — `npm test` | pass |
+| **5** | **`dd8878e`** | **pass** | **pass** — Postgres service added | **pass** |
 
 **Two separate errors, and the second is the worse one.**
 
@@ -397,6 +398,6 @@ It also turned up something the gate is not for. Two live seed rows read *"Optio
 
 **This is P32 a third time.** P22: a documented command never actually run. P32: host code verified, container assumed to match. P34: tests verified on a machine with a database, CI assumed to match. One error, three layers — **testing next to the artefact rather than the artefact**, and here the artefact was a CI run that was genuinely available the whole time.
 
-**Fix:** the `serving` job now declares the same `postgres:16` service as `migrations`; the suite's global setup creates `instacram_test` itself as the image's superuser. **Not yet verified** — the fix is correct by inspection of both the config and the setup, but by the standard this log holds everything else to, it is a hypothesis until a green run is observed.
+**Fix:** the `serving` job now declares the same `postgres:16` service as `migrations`; the suite's global setup creates `instacram_test` itself as the image's superuser. **Verified:** run 5, on `dd8878e`, is the project's **first green CI run** — `serving`, `pipeline` and `migrations` all pass. It was held as a hypothesis until that run was observed, rather than reported as fixed because the config read correctly.
 
 **Generalises to:** "It never ran" is a claim about the past, and the past is usually queryable — check before repeating it. A CI system nobody reads is worse than none: it produces correct evidence and a false sense that evidence would be noticed. And when the local suite needs a service, the CI job needs the same service, declared, or the green locally is a property of the laptop. Ask what *else* would produce it — here, "gate works" and "gate is blind" were indistinguishable, and only a deliberately wrong input could separate them. Every quality gate needs a negative control, because a gate is the one component whose failure mode is looking perfect. And an LLM runtime silently truncating over-long input is a correctness bug wearing the costume of a performance limit: it returns a confident, well-formed, entirely fabricated answer, and nothing in the response says which half of the prompt it read.
