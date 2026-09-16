@@ -195,10 +195,20 @@ async def drain_once(
 
 
 async def run_forever(dsn: str, client: httpx.AsyncClient, *, interval: float = 5.0) -> None:
-    conn = await asyncpg.connect(dsn)
+    """The drain loop. Survives a bad pass AND recovers from a lost connection.
+
+    Those are different properties, and the first version had only the first. It
+    connected once and caught every exception - so after a Postgres restart it
+    kept running, and kept failing on the same dead connection on every pass,
+    forever, looking alive the whole time. It was never noticed because until
+    2026-09-16 nothing ever started this loop at all (P37).
+    """
+    conn: asyncpg.Connection | None = None
     try:
         while True:
             try:
+                if conn is None or conn.is_closed():
+                    conn = await asyncpg.connect(dsn)
                 report = await drain_once(conn, client)
                 if report.claimed or report.reaped:
                     log.info(
@@ -206,11 +216,18 @@ async def run_forever(dsn: str, client: httpx.AsyncClient, *, interval: float = 
                         report.claimed, report.written, report.retried,
                         report.dead_lettered, report.reaped,
                     )
+            except asyncio.CancelledError:
+                raise
             except Exception:
                 # The loop must outlive one bad pass: a worker that exits on a
                 # transient database blip strands every owed vector until
-                # someone notices the process is gone.
-                log.exception("outbox drain failed; continuing")
+                # someone notices the process is gone. And it must drop the
+                # connection, or it outlives the pass without recovering from it.
+                log.exception("outbox drain failed; reconnecting on the next pass")
+                if conn is not None and not conn.is_closed():
+                    await conn.close()
+                conn = None
             await asyncio.sleep(interval)
     finally:
-        await conn.close()
+        if conn is not None and not conn.is_closed():
+            await conn.close()

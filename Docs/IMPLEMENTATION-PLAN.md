@@ -262,9 +262,9 @@ Measure and record: cache hit rate on candidate topics, time-to-first-card on a 
 | 3.4 | **Done** | `npm run vectors:verify` against the real index: 14/14 topics retrieve themselves at 1.0000; an unrelated query peaks at 0.7923; 0 orphans |
 | 5.1 | **Done** | A first request enqueues an expansion and returns in **224ms**; the worker generates and resolves candidates. Live: `Java Data Structures`, 20 candidates → 1 reused / 19 created, 0 errors, 54.4s |
 | 5.2 | **Done** | The plan's own test, verbatim: 20 polls of a field holding an empty topic, zero requeues. **Seen failing** when a poll was made to requeue empty topics |
-| 5.3 | Partly | Reuse links the existing topic and its cards serve under the new field. No test yet drives it from a feed request end to end — that is 5.5 |
-| 5.4 | **Half** | Serving creates the pending topic and its outbox row. **The pipeline worker that claims pending topics does not exist yet**, so a created topic stays pending |
-| 5.5 | Not started | Needs 5.4's worker |
+| 5.3 | **Done, live** | `Java Data Structures` served 2 reused `TreeSet` cards at t+0, before any generation. No automated end-to-end test yet — that is 5.5 |
+| 5.4 | **Done, live** | Serving creates the pending topic; the pipeline's topic worker claims and generates it. Cards arrived **per topic** (2 → 5 at t+50s) with `generating` true throughout. Claim exclusivity, dead-worker recovery and degraded-run backoff each **seen failing** with their mechanism removed. Building it exposed **P37**: the outbox worker had never run in the deployed service |
+| 5.5 | Not started | Unblocked |
 | 5.6, 5.7 | Not started | The job table already has `kind = 'more'` for 5.6 |
 
 Decisions taken to get here, each recorded in DECISIONS.md on 2026-09-16: Postgres as the queue for both the pipeline and candidate generation; an advisory lock on the candidate name **plus** a Postgres read for topics whose vector is still owed (the lock alone was shown to prevent nothing, P35); deterministic tie-breaking between duplicate topics, without which 5.5 could fail while every lookup looked correct.

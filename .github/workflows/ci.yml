@@ -37,6 +37,20 @@ jobs:
 
   pipeline:
     runs-on: ubuntu-latest
+    # The topic worker's claim tests are SQL - SKIP LOCKED, a stale-claim window -
+    # and run against a real Postgres, built from serving's migration files by
+    # tests/conftest.py. Declared here from the start rather than after four red
+    # runs, which is what serving's missing database cost (P34).
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: instacram
+          POSTGRES_PASSWORD: instacram
+          POSTGRES_DB: instacram
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 3s --health-retries 10
     defaults:
       run:
         working-directory: services/pipeline

@@ -130,3 +130,23 @@ FACT_CHECK_CHUNK_OVERLAP = int(_env("FACT_CHECK_CHUNK_OVERLAP", "800"))
 # up on its own schedule, so the topic is never lost either way.
 OUTBOX_MAX_ATTEMPTS = int(_env("OUTBOX_MAX_ATTEMPTS", "5"))
 OUTBOX_BASE_BACKOFF_SECONDS = int(_env("OUTBOX_BASE_BACKOFF_SECONDS", "2"))
+
+# Whether this process runs the background workers (the outbox drain and the
+# topic worker). ON by default, deliberately. Until 2026-09-16 nothing started the
+# outbox worker at all: it was built, tested by scripts calling drain_once by
+# hand, and never run in the deployed service, so 19 owed vectors sat untouched
+# for hours (P37). A default of OFF would recreate exactly that the first time
+# someone deploys without the variable. /health reports the state either way.
+PIPELINE_WORKERS = _env("PIPELINE_WORKERS", "on").lower() != "off"
+
+# A claimed topic becomes claimable again after this long. It serves two cases at
+# once. A worker that died mid-run releases its topic after this window. And the
+# graph's `degraded` outcome - the fact-checker failed, not the cards - leaves a
+# topic 'pending' on purpose, so without a window a broken checker would be
+# retried in a hot loop; the window is its backoff.
+#
+# Sized from measurement: a topic takes 113s median, but a passing card on a
+# long source spends up to 11 chunked fact-check calls (P33), so a four-card topic
+# on a 32k-char page can run ~10 minutes. Thirty minutes is well past any real run.
+TOPIC_CLAIM_STALE_SECONDS = int(_env("TOPIC_CLAIM_STALE_SECONDS", "1800"))
+TOPIC_POLL_SECONDS = float(_env("TOPIC_POLL_SECONDS", "5"))
