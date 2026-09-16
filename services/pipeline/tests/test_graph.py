@@ -88,17 +88,47 @@ async def test_happy_path_reaches_persist(stub) -> None:
     assert not result.failed
 
 
-async def test_scrape_and_data_gen_run_concurrently(stub) -> None:
-    """Both stubs sleep 50ms. Sequential would take >=100ms; concurrent well under.
+async def test_scrape_and_data_gen_run_concurrently(
+    stub, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Task 4b.2: the two independent steps must actually overlap in time.
 
-    This is task 4b.2's assertion, and it is why the two steps hang off START
-    separately instead of one feeding the other.
+    Asserted by OVERLAP, not by wall-clock. An earlier version of this test
+    compared total elapsed time against a threshold and went red the first time
+    the machine was busy - a flaky test for a property that is not actually about
+    speed. Recording when each step enters and leaves tests the real thing, and
+    cannot be defeated by a slow CI runner.
     """
-    started = asyncio.get_event_loop().time()
+    spans: dict[str, list[float]] = {}
+
+    def clock() -> float:
+        return asyncio.get_event_loop().time()
+
+    async def timed_ground(topic, field, *, sources, conn=None):
+        spans["scrape"] = [clock(), 0.0]
+        await asyncio.sleep(0.05)
+        spans["scrape"][1] = clock()
+        return GOOD_GROUNDING
+
+    async def timed_supplement(client, topic, description):
+        spans["data_gen"] = [clock(), 0.0]
+        await asyncio.sleep(0.05)
+        spans["data_gen"][1] = clock()
+        return SUPPLEMENT
+
+    monkeypatch.setattr(mod, "ground_topic", timed_ground)
+    monkeypatch.setattr(mod, "generate_supplement", timed_supplement)
     await run()
-    elapsed = asyncio.get_event_loop().time() - started
-    assert elapsed < 0.09, f"steps appear sequential: {elapsed:.3f}s"
-    assert {"scrape", "data_gen"} <= set(stub)
+
+    assert set(spans) == {"scrape", "data_gen"}, "both steps must have run"
+    scrape_start, scrape_end = spans["scrape"]
+    gen_start, gen_end = spans["data_gen"]
+    # They overlap iff each starts before the other finishes. Sequential
+    # execution makes one strictly follow the other and this fails.
+    assert scrape_start < gen_end and gen_start < scrape_end, (
+        f"steps did not overlap: scrape {scrape_start:.4f}-{scrape_end:.4f}, "
+        f"data_gen {gen_start:.4f}-{gen_end:.4f}"
+    )
 
 
 async def test_unsourced_topic_never_reaches_card_generation(

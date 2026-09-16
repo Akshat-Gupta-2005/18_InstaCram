@@ -15,6 +15,7 @@ AGENT_PROMPTS = [
     "data-generation.md",
     "card-generation.md",
     "fact-check.md",
+    "fact-check-chunk.md",
     "candidate-topics.md",
 ]
 
@@ -46,6 +47,28 @@ def test_fact_check_prompt_exposes_its_placeholders() -> None:
         assert var in prompt
 
 
+def test_chunk_prompt_exposes_its_placeholders() -> None:
+    prompt = load_prompt("fact-check-chunk.md")
+    for var in ("{{card_content}}", "{{excerpt}}", "{{part}}", "{{total}}"):
+        assert var in prompt
+
+
+def test_chunk_prompt_says_absence_is_not_contradiction() -> None:
+    """The one instruction the chunk pass cannot work without.
+
+    Without it the model treats "this fragment does not mention the claim" as
+    grounds to fail, and since almost every claim is missing from almost every
+    fragment, nearly every card would be falsely rejected - with no retry to
+    recover it. Asserted on the real file because deleting this paragraph would
+    break the gate in a way no other test would notice.
+    """
+    # Whitespace-normalised: the instruction is wrapped across lines in the file,
+    # and where the wrap happens is not what this test is about.
+    prompt = " ".join(load_prompt("fact-check-chunk.md").lower().split())
+    assert "not a contradiction" in prompt
+    assert "fragment" in prompt
+
+
 # The output contract must live INSIDE the prompt block. The `## Output` section
 # documents it for humans and is never sent, so a key named only there is a key
 # the model has to invent - which it did: the fact-check prompt described
@@ -62,6 +85,14 @@ OUTPUT_KEYS = {
         "recall_answer",
     ],
     "fact-check.md": ["verdict", "reason", "failed_claim"],
+    "fact-check-chunk.md": [
+        "verdict",
+        "reason",
+        "failed_claim",
+        "contradicted",
+        "supported",
+        "not_covered",
+    ],
 }
 
 

@@ -202,14 +202,14 @@ Ships **with** the pipeline, not after it (BUILD-PLAN §4.3).
 
 | # | Task | Done when |
 |---|---|---|
-| 4c.1 | Pass → persist scroll, embed into Scroll-Content collection, set `status='ready'` | Card is in Postgres and retrievable |
-| 4c.2 | Fail → `Rejected_Draft` row with reason; counters increment; cap at last 20 per topic | A forced-fail run produces quarantine rows and correct counts. The cap's database behaviour is already covered by `verify-invariants.sql` 8a–8c |
-| 4c.3 | All-fail → `status='empty'`, `runs` incremented | Test with a fact-checker stubbed to reject everything |
-| 4c.4 | Outbox: topic + outbox row in one transaction | Test asserts both committed or neither |
-| 4c.5 | Outbox worker drains to Qdrant with bounded retry/backoff, then dead-letters | **Kill Qdrant mid-run, restart it, assert no topic ends without a vector.** A permanently poisoned row reaches a `failed` state instead of spinning |
-| 4c.6 | Reconciliation check, both directions, **and re-enqueue of dead-lettered rows** | Detects a manually orphaned vector and a manually devectored topic; a dead-lettered row is picked up and repaired on the next sweep |
-| 4c.7 | `reindex` rebuilds both collections from Postgres | Drop a collection, reindex, similarity search works again |
-| 4c.8 | Prometheus counters for drafts generated/passed/failed | Visible on the metrics endpoint |
+| 4c.1 | Pass → persist scroll, embed into Scroll-Content collection, set `status='ready'` | **DONE.** 4 cards persisted and read back; `reindex` writes the Scroll-Content vectors (12 on the seeded corpus) |
+| 4c.2 | Fail → `Rejected_Draft` row with reason; counters increment; cap at last 20 per topic | **DONE.** Written in the same transaction as the cards, so counters can never disagree with what was persisted. Verified `generated 4 / passed 4 / failed 0 / runs 1`. **A checker that errored is not counted as a rejection** |
+| 4c.3 | All-fail → `status='empty'`, `runs` incremented | **DONE.** Covered by graph tests with a stubbed rejecting checker; the `degraded` path is deliberately kept separate and leaves the topic `pending` |
+| 4c.4 | Outbox: topic + outbox row in one transaction | **DONE.** `create_topic_with_outbox`. Note what it does *not* do: no embed, no Qdrant write — a network call inside the transaction that must not fail is exactly what the outbox exists to avoid |
+| 4c.5 | Outbox worker drains to Qdrant with bounded retry/backoff, then dead-letters | **DONE, proved against the real stack.** Qdrant killed mid-drain: row retried with its error recorded, worker survived; restarted, vector appeared, row `done`. 5 attempts / exponential backoff / dead-letter. **A third failure the plan did not name is also handled**: a worker dying mid-row strands it in `processing` forever, so a reaper returns stale rows to the queue |
+| 4c.6 | Reconciliation check, both directions, **and re-enqueue of dead-lettered rows** | **DONE.** Both directions verified, with opposite treatment — missing vector re-enqueued (waste), orphan vector deleted (corruption). A dead-lettered row was revived and its vector came back |
+| 4c.7 | `reindex` rebuilds both collections from Postgres | **DONE.** Collection dropped, rebuilt: 8 topic + 12 scroll vectors, search working (top score 0.7609). Reads `live_scroll`, so retired cards do not reappear via semantic search |
+| 4c.8 | Prometheus counters for drafts generated/passed/failed | **DONE.** `app/metrics.py`, served at `GET /metrics` on the pipeline and verified from the rebuilt container. Rejections and **checker errors are separate counters**, never summed — they look identical in one number and need opposite responses. Outcomes are labelled (`ready`/`unsourced`/`empty`/`degraded`) rather than collapsed into a failure count. Duration buckets go to 600s, because the default buckets top out at 10s and would file every run of a ~120s local model in `+Inf` |
 
 **4c.5 and 4c.7 are the tests worth writing carefully.** They are the only evidence that P11's resolution actually holds, and both are trivial to run now and awkward to retrofit.
 
@@ -224,6 +224,16 @@ The first real pipeline runs produce the project's first numbers. Record them in
 - **fact-check quality with thinking on vs off** — run one sample of drafts both ways and compare each verdict against your own judgement, using the quarantined text. This settles the question deferred on 2026-09-12; W4 is the first point where it can be measured instead of guessed
 
 If the rejection rate is high, that is the evidence the no-retry decision was deliberately left open for (P10). Decide then, with the quarantined text in hand.
+
+**8d is COMPLETE, and the first run of it was misleading in a way worth recording.** Measured over 6 topics (`measurements/20260916-061312.json`): 6/6 `ready`, 24 drafts attempted, **4 malformed (17%, three of them on TreeSet alone)**, 20 valid, **median 113s per topic** (min 92, max 128), 11.3 min total. The headline rejection rate was **0.000** — and that number turned out to mean nothing, because the gate had never been shown 11 of the 20 cards (P33). A rate of zero is what a working gate and a blind gate both report.
+
+So 8d gained a step it did not originally have, and every later measurement depends on it: **`scripts/negative_control.py` must pass before a rejection rate is quoted.** It plants known-false claims in cards built on real grounding and checks the gate catches them, with faithful controls that must still pass. Current state: **7/7 planted errors caught, 2/2 controls kept**, across both the single-pass and chunked paths.
+
+What the numbers now say:
+- **rejection rate** — 0/9 on the drafts that were genuinely checked. Too small a sample to settle P10, and it must be re-measured now the gate works. The no-retry decision stays open.
+- **zero-card topics** — 0 of 6.
+- **cost per topic** — 113s median, and this is the number W5 is built against: a cache miss is ~2 minutes of waiting. Chunking raises it for long sources: a *passing* card on a 32k-char source spends 11 fact-check calls / 132s, because passing means ruling out a contradiction in every excerpt. Rejection is usually much cheaper — it short-circuits at the first contradicting excerpt, seen at 17s.
+- **thinking on vs off** — settled: **off**. See DECISIONS 2026-09-16. The A/B as originally specified could not have answered it, because it compared arms on drafts that all passed; it had to be re-asked on cases that discriminate.
 
 ---
 
@@ -270,12 +280,17 @@ Not a ceremony — these are the four moments where something is learned that ca
 
 ## 12. Start here
 
-W0, W1, W2, W2b, W3 **and the scraper spike** are done. Task 0.5 is closed — both Qdrant collections exist at 768 dims / Cosine. One carve-out remains: task 2b.1 (Firebase verification) waits on credentials, with auth running as a dev stub until then.
+W0, W1, W2, W2b, W3, the scraper spike, and **W4's 8a and 8b** are done. Task 0.5 is closed — both Qdrant collections exist at 768 dims / Cosine. One carve-out remains: task 2b.1 (Firebase verification) waits on credentials, with auth running as a dev stub until then.
 
-**W3's result:** `intfloat/e5-base-v2` at threshold `0.955`, and the §6.2 go/no-go **passed** — strict-threshold-only matching is viable, at a measured cost of roughly a third of identical topics regenerating as duplicates. Task 3.4 (the Qdrant write + search path) is the one piece carried forward into W4.
+**W3's result:** `intfloat/e5-base-v2` at threshold `0.955`, and the §6.2 go/no-go **passed** — strict-threshold-only matching is viable, at a measured cost of roughly a third of identical topics regenerating as duplicates. Task 3.4 (the Qdrant write + search path) is carried into W4.
+
+**W4 so far:** one topic goes scrape → generate → write → fact-check and comes out as 4 verified cards in ~122s. Sourcing reaches **10/10 on the benchmark**, after three fixes that had to ship together — a relevance check, multi-candidate discovery, and a Javadoc source for what Wikipedia has no page for. Task 3.4 is still open.
 
 Next:
 
-1. **W4: the pipeline.** The five steps, the fact-check gate with its counters and quarantine, the outbox worker, and `reindex`. The scraper's unknown is now measured rather than open: retrieval works over plain HTTP with no browser, but sourcing *relevance* does not, so 4a.1b–4a.1d carry the three fixes. Start with 4a.1b — it is the cheapest, and until it exists every later step can be fed grounding that is about the wrong thing.
-2. **W5's wiring**, which needs W4. Today an unknown field reports `exhausted`, because nothing generates. W5 makes it queue work and report `generating` instead, and adds `POST /v1/fields/{id}/expand` — the endpoint the end-of-field card's "more topics" action calls.
-3. **W6 (client)** stays blocked on the framework choice, and nothing before it depends on one.
+1. **W4 · 8c — persistence.** The largest remaining piece, and mostly *outside* the graph: scroll rows and the outbox in one transaction, quarantine rows with counters, the outbox worker, reconciliation, `reindex`. **Start with 4c.4 + 4c.5, not 4c.1.** Persisting a scroll is the easy part, and if the outbox lands after it, the transactional guarantee gets retrofitted around code that already works without it — which is how a dual write quietly stops being atomic. **4c.5 and 4c.7 are the tests worth writing carefully**: they are the only evidence P11's resolution holds.
+2. **W4 · 8d — measure.** Rejection rate, zero-card topics, cost per topic, and fact-check quality with thinking on versus off. This is the checkpoint the no-retry decision (P10) was left open for, and the point at which LangGraph either earns its place or should be removed — see the tripwire in DECISIONS.md.
+3. **W5's wiring**, which needs W4. Today an unknown field reports `exhausted`, because nothing generates. W5 makes it queue work and report `generating` instead, and adds `POST /v1/fields/{id}/expand` — the endpoint the end-of-field card's "more topics" action calls. **5.5 is the acceptance test for the whole design.**
+4. **W6 (client)** stays blocked on the framework choice, and nothing before it depends on one.
+
+**Two decisions are needed before 4c.5 rather than after it**, because they are parameters of the code: the outbox retry/backoff policy, and what happens to a row that never drains.

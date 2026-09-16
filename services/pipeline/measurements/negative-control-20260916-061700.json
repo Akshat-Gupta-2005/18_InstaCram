@@ -1,0 +1,92 @@
+{
+  "generated_at": "2026-09-16T06:17:00.689755+00:00",
+  "planted_errors": 7,
+  "planted_caught": 4,
+  "detection_rate": 0.571,
+  "controls": 2,
+  "controls_passed": 2,
+  "checker_errors": 0,
+  "results": [
+    {
+      "topic": "HashMap",
+      "case": "control-faithful",
+      "expected_pass": true,
+      "passed": true,
+      "correct": true,
+      "reason": "The card accurately restates the key facts from the source material about HashMap's performance characteristics, null handling, and general behavior. It does not contradict the source material or make unsupported claims.",
+      "failed_claim": null
+    },
+    {
+      "topic": "HashMap",
+      "case": "planted-thread-safety",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card incorrectly states that HashMap is synchronized internally. The source material explicitly states that HashMap is not synchronized and requires external synchronization for concurrent access.",
+      "failed_claim": "HashMap is the hash-table backed implementation of the Map interface. It is synchronized internally, so several threads may modify the same HashMap concurrently without any external synchronization."
+    },
+    {
+      "topic": "HashMap",
+      "case": "planted-complexity",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card claims that get and put operations in HashMap run in O(log n) time, which contradicts the source material. The source material states that these operations run in constant-time (O(1)) assuming the hash function disperses elements properly among buckets.",
+      "failed_claim": "Its get and put operations run in O(log n) time, because entries are held in a balanced tree ordered by key."
+    },
+    {
+      "topic": "HashMap",
+      "case": "planted-nulls",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card claims that HashMap 'permits neither null keys nor null values', which directly contradicts the source material stating that HashMap 'permits null values and the null key'.",
+      "failed_claim": "HashMap is the hash-table backed implementation of the Map interface. It permits neither null keys nor null values: passing null to put throws a NullPointerException."
+    },
+    {
+      "topic": "HashMap",
+      "case": "planted-ordering",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card incorrectly states that HashMap iterates its entries in the order they were inserted, which contradicts the source material. The source explicitly states that HashMap does not guarantee any order, and that iteration order is not stable.",
+      "failed_claim": "HashMap iterates its entries in the order they were inserted, so iteration order is stable and can be relied upon."
+    },
+    {
+      "topic": "Loss aversion",
+      "case": "control-faithful",
+      "expected_pass": true,
+      "passed": true,
+      "correct": true,
+      "reason": "The card accurately summarizes key concepts and references from the provided material without introducing factual errors or unsupported claims. It correctly identifies loss aversion as a topic of debate and cites relevant studies and authors.",
+      "failed_claim": null
+    },
+    {
+      "topic": "Loss aversion",
+      "case": "planted-inverted",
+      "expected_pass": false,
+      "passed": true,
+      "correct": false,
+      "reason": "The card does not contain any specific factual claims that can be checked against the provided material. It appears to be a prompt for generating a card about loss aversion, and the content provided is consistent with the references and topics listed.",
+      "failed_claim": null
+    },
+    {
+      "topic": "Loss aversion",
+      "case": "planted-attribution",
+      "expected_pass": false,
+      "passed": true,
+      "correct": false,
+      "reason": "The card does not make any specific factual claims that can be checked against the source material. It appears to be a placeholder or incomplete card, and no claims are made that would require verification.",
+      "failed_claim": null
+    },
+    {
+      "topic": "Loss aversion",
+      "case": "planted-figure",
+      "expected_pass": false,
+      "passed": true,
+      "correct": false,
+      "reason": "The card accurately summarizes the topic of loss aversion, referencing key concepts and associated studies without making unsupported factual claims. It does not reproduce a distinctive sentence from the source material and aligns with the provided references.",
+      "failed_claim": null
+    }
+  ]
+}

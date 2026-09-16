@@ -20,7 +20,7 @@ Throughout these files, ★ marks **a non-obvious engineering decision — the p
 | Vector DBs (×2) | Qdrant, self-hosted via Docker | Runs in the same Docker/K8s story as everything else, with no per-month floor and no vendor account required to run the project locally. Usable Python *and* Node clients, which matters because both services touch it. |
 | Embeddings | Self-hosted sentence-transformers via Hugging Face text-embeddings-inference, pinned to `cpu-1.9.3` (P19) | The highest-volume model call in the system — ~20 candidates on every field request, against a handful of LLM calls only on a miss. Self-hosting removes per-call cost and a network round-trip from the hottest path. **The specific model is chosen by measurement, not reputation:** the W3 calibration sweep runs across `all-MiniLM-L6-v2` (384d), `bge-base-en-v1.5` (768d) and `e5-base-v2` (768d), and whichever best separates the polysemy collision pairs wins. Dimension is fixed at Qdrant collection creation, so this settles first. |
 | Feed delivery | Paginated HTTP, ~10 scrolls per page, client prefetches at ~3 remaining | Matches how a scroll feed is used, keeps the server stateless per request, and needs no second transport. On a cache miss the same endpoint returns a partial page plus `generating: true` and the client re-polls — see §4.3. Deliberately not SSE: React Native has no native `EventSource`, so SSE would need a polyfill on mobile while polling is an identical `fetch` on both clients. |
-| Web scraping | Playwright | Dual-purpose: the same library does the scraping and the browser E2E tests. One dependency, two jobs. |
+| Web scraping | **Plain HTTP (`httpx`) — Playwright not needed** | Originally chosen as dual-purpose: one library for scraping and browser E2E. The spike settled it the other way. 10/10 topics retrieved over documented HTTP APIs in ~1.1s each, and a browser is only required for pages that render content with JavaScript — which neither source does. Playwright stays in the stack for **E2E testing only**. Discovering a browser is unnecessary is itself a useful result: it removes a heavy dependency from the hot path. Retrieval was never the hard part, though — see §4.5 and DECISIONS.md P26. |
 | Auth | Firebase Auth | Already implemented once (GoRide). Auth is not where this project is trying to be interesting; buying it back as a managed service preserves time for the pipeline. |
 | Testing | Playwright + Selenium, unit + integration | Explicit project requirement. Playwright overlaps with the scraper (above). |
 | Containerisation | Docker | Two services in two different languages, plus Postgres and Qdrant. Containers are what make that reproducible on one machine. |
@@ -276,7 +276,11 @@ Scraped text is input to the card generator and is never served to a user verbat
 
 **Assumes:** the card generator paraphrases rather than reproduces.
 
-**Breaks when:** it does not — an LLM given a short snippet and asked for a short card can reproduce it near-verbatim. The architecture removes the *intent* to republish but does not by itself guarantee the *outcome*; robots.txt and terms-of-service compliance in the scraper are likewise still to be specified.
+**Breaks when:** it does not — an LLM given a short snippet and asked for a short card can reproduce it near-verbatim. The architecture removes the *intent* to republish but does not by itself guarantee the *outcome*; the card-generation prompt carries an explicitly forceful copying rule for that reason, and the fact-checker fails a draft that reproduces a distinctive sentence.
+
+**robots.txt and terms of service are now specified, per source.** The scraper checks `robots.txt` for every host before fetching, cached per host, and identifies itself with a real contact — Wikimedia answers an unidentified client with `HTTP 403`, and disguising the client to get past that would be evading the policy rather than following it. Wikipedia text is CC BY-SA, satisfied by never serving it and by carrying `source_url` on every card. Oracle's `robots.txt` permits the API docs and disallows `/search/`, which the deterministic class→URL lookup does not use. **This is a per-host question, not one settled once:** a third source repeats the check. See DECISIONS.md P26.
+
+**A second failure mode, found by measurement and not anticipated here:** the scrape can return perfectly good prose about *the wrong concept*. Four Java topics were grounded on one identical article because Wikipedia has no page for those classes. Nothing downstream catches it — the fact-check gate asks whether a claim is *true*, and generic text about collections is not false when the topic was `TreeSet`, merely not about it. The relevance check (P26/P27) exists for this, and it is the reason grounding is refused rather than accepted-and-filtered.
 
 ### 4.6 The dual write — solved by an outbox
 
@@ -332,6 +336,8 @@ The full target layout is below. Parts of it now exist; the code map says which.
 │   ├── pipeline/                Python + FastAPI — generation path
 │   │   ├── app/graph/           LangGraph definition of the 5 steps
 │   │   ├── app/agents/          scraper, data-gen, card-gen, fact-check
+│   │   ├── app/sources/         grounding sources behind one protocol (wikipedia, javadoc)
+│   │   ├── app/relevance.py     is the retrieved page about the topic at all?
 │   │   ├── app/stores/          Postgres + Qdrant writes
 │   │   ├── app/outbox/          outbox worker + reconciliation check
 │   │   └── app/reindex/         rebuild Qdrant collections from Postgres
@@ -373,7 +379,8 @@ InstaCram v1 is finished when all of the following are true and checkable:
 - [ ] Playwright/Selenium E2E covers: field request → feed render → bookmark → reload.
 - [ ] The fact-check rejection rate is a number someone can look up, and rejected draft text is readable from quarantine (§4.3).
 - [ ] A topic whose drafts all fail ends up `status = 'empty'`, appears in `failed_topics`, is **not** retried by polling (verified by polling it repeatedly and asserting zero pipeline runs), and **is** retried on the next "more topics" tap (§4.3, invariant 6).
-- [ ] The similarity threshold is a calibrated number with the labelled set and sweep that produced it committed alongside it (§4.2).
+- [x] The similarity threshold is a calibrated number with the labelled set and sweep that produced it committed alongside it (§4.2). **Done:** `0.955` on `intfloat/e5-base-v2`, the lowest value with zero false merges across 44 hand-labelled pairs, with `calibration/labels.json`, the generated candidates, and one sweep result per model all committed in `services/serving/calibration/`.
+- [ ] Every card's grounding is verifiably *about* that card's topic, not merely retrieved successfully — the failure a character count cannot see (P26).
 - [ ] Killing Qdrant mid-generation and restarting leaves no topic without a vector — the outbox drains and the invariant holds (§4.6).
 - [ ] `reindex` rebuilds both collections from Postgres from scratch, and is exercised at least once against a non-empty corpus.
 

@@ -1,0 +1,110 @@
+{
+  "generated_at": "2026-09-16T06:13:12.729135+00:00",
+  "topics": 6,
+  "drafts_generated": 20,
+  "drafts_passed": 20,
+  "drafts_failed": 0,
+  "checker_errors": 0,
+  "rejection_rate": 0.0,
+  "zero_card_topics": [],
+  "outcomes": {
+    "ready": 6
+  },
+  "seconds_per_topic": {
+    "min": 91.6,
+    "median": 112.94999999999999,
+    "max": 127.8,
+    "total": 676.8
+  },
+  "thinking_ab": {
+    "verdicts_compared": 0,
+    "agreed": 0,
+    "agreement_rate": null
+  },
+  "runs": [
+    {
+      "topic": "HashMap",
+      "field": "Java Collections",
+      "outcome": "ready",
+      "seconds": 127.8,
+      "drafts": 4,
+      "passed": 4,
+      "failed": 0,
+      "malformed": 0,
+      "checker_errors": 0,
+      "source": "javadoc",
+      "grounding_chars": 4768,
+      "agreements": []
+    },
+    {
+      "topic": "TreeSet",
+      "field": "Java Collections",
+      "outcome": "ready",
+      "seconds": 91.6,
+      "drafts": 1,
+      "passed": 1,
+      "failed": 0,
+      "malformed": 3,
+      "checker_errors": 0,
+      "source": "javadoc",
+      "grounding_chars": 3175,
+      "agreements": []
+    },
+    {
+      "topic": "ArrayList",
+      "field": "Java Collections",
+      "outcome": "ready",
+      "seconds": 113.3,
+      "drafts": 4,
+      "passed": 4,
+      "failed": 0,
+      "malformed": 0,
+      "checker_errors": 0,
+      "source": "javadoc",
+      "grounding_chars": 3535,
+      "agreements": []
+    },
+    {
+      "topic": "Loss aversion",
+      "field": "Behavioural Economics",
+      "outcome": "ready",
+      "seconds": 112.6,
+      "drafts": 4,
+      "passed": 4,
+      "failed": 0,
+      "malformed": 0,
+      "checker_errors": 0,
+      "source": "wikipedia",
+      "grounding_chars": 32169,
+      "agreements": []
+    },
+    {
+      "topic": "Anchoring",
+      "field": "Behavioural Economics",
+      "outcome": "ready",
+      "seconds": 125.0,
+      "drafts": 4,
+      "passed": 4,
+      "failed": 0,
+      "malformed": 0,
+      "checker_errors": 0,
+      "source": "wikipedia",
+      "grounding_chars": 36724,
+      "agreements": []
+    },
+    {
+      "topic": "Endowment effect",
+      "field": "Behavioural Economics",
+      "outcome": "ready",
+      "seconds": 106.5,
+      "drafts": 3,
+      "passed": 3,
+      "failed": 0,
+      "malformed": 1,
+      "checker_errors": 0,
+      "source": "wikipedia",
+      "grounding_chars": 23424,
+      "agreements": []
+    }
+  ]
+}

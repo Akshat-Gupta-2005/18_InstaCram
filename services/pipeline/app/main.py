@@ -6,7 +6,9 @@ lands in app/graph/ at W4; this is the W1 skeleton.
 
 import asyncpg
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
+
+from app import metrics
 
 # Importing config loads the repo-root .env by explicit path. A bare
 # load_dotenv() used to live here and never found it, because this service runs
@@ -35,6 +37,19 @@ async def db_healthy() -> bool:
         return False
     finally:
         await conn.close()
+
+
+@app.get("/metrics")
+async def prometheus_metrics() -> Response:
+    """Task 4c.8. Scraped by Prometheus; the two services get separate panels
+    because they fail differently - serving latency versus pipeline throughput.
+
+    Deliberately unauthenticated and on the same port as /health, matching how
+    the rest of the local stack works. W7 decides whether it moves to a separate
+    port before anything is network-exposed.
+    """
+    payload, content_type = metrics.render()
+    return Response(content=payload, media_type=content_type)
 
 
 @app.get("/health")

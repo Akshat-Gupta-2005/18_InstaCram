@@ -27,6 +27,22 @@ model_list:
       model: ollama_chat/qwen2.5-coder:7b
       api_base: os.environ/OLLAMA_BASE_URL
 
+  # Same model as `default`, with reasoning ON. Exists only so W4's 8d can settle
+  # the question deferred on 2026-09-12 by MEASUREMENT rather than by argument:
+  # is the fact-checker better with thinking enabled?
+  #
+  # The fact-checker is the one place reasoning might pay for itself, because it
+  # judges whether a claim is true, and its reasoning arrives in a separate
+  # `reasoning_content` field that leaves the JSON untouched. Nothing else should
+  # use this entry - P23 measured the cost on ordinary calls: an empty reply when
+  # thinking consumed the token budget, and LiteLLM appending "/think" to the
+  # user message, which one reply echoed back as "OK /think".
+  - model_name: thinking
+    litellm_params:
+      model: ollama_chat/qwen3:8b
+      api_base: os.environ/OLLAMA_BASE_URL
+      think: true
+
   # To swap back to a hosted provider: replace the `default` entry above with
   # this and put a key in .env. No code changes anywhere.
   #

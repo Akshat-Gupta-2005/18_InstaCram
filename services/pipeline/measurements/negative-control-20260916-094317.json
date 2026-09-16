@@ -1,0 +1,92 @@
+{
+  "generated_at": "2026-09-16T09:43:17.325923+00:00",
+  "planted_errors": 7,
+  "planted_caught": 7,
+  "detection_rate": 1.0,
+  "controls": 2,
+  "controls_passed": 2,
+  "checker_errors": 0,
+  "results": [
+    {
+      "topic": "HashMap",
+      "case": "control-faithful",
+      "expected_pass": true,
+      "passed": true,
+      "correct": true,
+      "reason": "The card accurately reflects the source material regarding HashMap's implementation of the Map interface, its performance characteristics for get and put operations, and its use of a hash table. No factual claims contradict the source material or are unsupported.",
+      "failed_claim": null
+    },
+    {
+      "topic": "HashMap",
+      "case": "planted-thread-safety",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card claims that HashMap is 'synchronized internally', which contradicts the source material stating that 'this implementation is not synchronized' and that 'note that this implementation is not synchronized'.",
+      "failed_claim": "HashMap is the hash-table backed implementation of the Map interface. It is synchronized internally, so several threads may modify the same HashMap concurrently without any external synchronization."
+    },
+    {
+      "topic": "HashMap",
+      "case": "planted-complexity",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card incorrectly states that HashMap's get and put operations run in O(log n) time. The source material clearly states that these operations run in constant-time (O(1)) assuming the hash function disperses elements properly among buckets.",
+      "failed_claim": "Its get and put operations run in O(log n) time, because entries are held in a balanced tree ordered by key."
+    },
+    {
+      "topic": "HashMap",
+      "case": "planted-nulls",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card incorrectly states that HashMap 'permits neither null keys nor null values', whereas the source material clearly states that HashMap 'permits null values and the null key'.",
+      "failed_claim": "HashMap permits neither null keys nor null values: passing null to put throws a NullPointerException."
+    },
+    {
+      "topic": "HashMap",
+      "case": "planted-ordering",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card claims that HashMap iterates its entries in the order they were inserted, making the iteration order stable and reliable. This contradicts the source material, which explicitly states that HashMap does not guarantee any order of the map.",
+      "failed_claim": "HashMap iterates its entries in the order they were inserted, so iteration order is stable and can be relied upon."
+    },
+    {
+      "topic": "Loss aversion",
+      "case": "control-faithful",
+      "expected_pass": true,
+      "passed": true,
+      "correct": true,
+      "reason": "no contradiction found across 11 excerpts of the source; 6 corroborated it - The excerpt confirms the card's specific claims about loss aversion, including the idea that losses weigh more heavily than equivalent gains, the mention of Amos Tversky and Daniel Kahneman as the proposers, and the general",
+      "failed_claim": null
+    },
+    {
+      "topic": "Loss aversion",
+      "case": "planted-inverted",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "excerpt 7 of 11 contradicts the card: The card claims that people weigh gains more heavily than equivalent losses, stating that gaining a sum of money produces a larger change in felt wellbeing than losing the same sum. However, the excerpt explicitly states that capuchins weighted losses more heavi",
+      "failed_claim": "Gaining a sum of money produces a larger change in felt wellbeing than losing the same sum does."
+    },
+    {
+      "topic": "Loss aversion",
+      "case": "planted-attribution",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "excerpt 1 of 11 contradicts the card: The card incorrectly attributes the identification of loss aversion to B. F. Skinner in 1953, while the excerpt clearly states that loss aversion was first proposed by Amos Tversky and Daniel Kahneman, not B. F. Skinner. This is a direct contradiction of the car",
+      "failed_claim": "Loss aversion is the tendency for a loss to weigh more heavily than an equivalent gain. It was first identified by B. F. Skinner in his 1953 work on operant conditioning."
+    },
+    {
+      "topic": "Loss aversion",
+      "case": "planted-figure",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "excerpt 5 of 11 contradicts the card: The card claims that the loss-aversion coefficient is about 0.5, meaning a loss weighs roughly half as much as an equal gain. However, the excerpt states that loss attention was found even for small payoffs, such as $1, and suggests that loss attention may be mo",
+      "failed_claim": "Loss aversion is the tendency for a loss to weigh more heavily than an equivalent gain. Empirical estimates put the loss-aversion coefficient at about 0.5, meaning a loss weighs roughly half as much as an equal gain."
+    }
+  ]
+}

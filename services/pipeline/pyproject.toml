@@ -22,6 +22,10 @@ dependencies = [
     # embeddings image because a drifting pull would silently invalidate a
     # calibrated threshold. Same reasoning, different dependency.
     "langgraph==1.2.11",
+    # Metrics endpoint (task 4c.8). Floored rather than pinned: small, stable,
+    # pure-Python, and its 0.x line has held its API for years - the opposite of
+    # the LangChain ecosystem, which is why that one is pinned exactly.
+    "prometheus-client>=0.20.0",
 ]
 
 # Without this, setuptools' flat-layout auto-discovery sees app/, spikes/ and
