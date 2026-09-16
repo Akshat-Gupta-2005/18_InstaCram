@@ -12,6 +12,7 @@
     "calibrate:generate": "tsx src/calibration/generate.ts",
     "calibrate:sweep": "tsx src/calibration/sweep.ts",
     "vectors:ensure": "tsx src/vectors/ensure.ts",
+    "vectors:verify": "tsx src/vectors/verifyTopicIndex.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
