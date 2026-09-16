@@ -1,0 +1,128 @@
+{
+  "generated_at": "2026-09-16T14:15:40.720370+00:00",
+  "planted_errors": 8,
+  "planted_caught": 8,
+  "detection_rate": 1.0,
+  "controls": 5,
+  "controls_passed": 3,
+  "checker_errors": 0,
+  "results": [
+    {
+      "topic": "HashMap",
+      "case": "control-faithful",
+      "expected_pass": true,
+      "passed": true,
+      "correct": true,
+      "reason": "The card accurately restates the key facts about HashMap from the source material, including its hash-table implementation, constant-time performance for get and put operations, and the role of the hash function. No factual claims contradict the source material or independent knowledge.",
+      "failed_claim": null
+    },
+    {
+      "topic": "HashMap",
+      "case": "planted-thread-safety",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card claims that HashMap is 'synchronized internally', which contradicts the source material stating that 'this implementation is not synchronized' and that 'note that this implementation is not synchronized'.",
+      "failed_claim": "HashMap is the hash-table backed implementation of the Map interface. It is synchronized internally, so several threads may modify the same HashMap concurrently without any external synchronization."
+    },
+    {
+      "topic": "HashMap",
+      "case": "planted-complexity",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card claims that HashMap's get and put operations run in O(log n) time, which contradicts the source material. The source material states that these operations run in constant-time (O(1)) assuming the hash function disperses elements properly among buckets.",
+      "failed_claim": "Its get and put operations run in O(log n) time, because entries are held in a balanced tree ordered by key."
+    },
+    {
+      "topic": "HashMap",
+      "case": "planted-nulls",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card incorrectly states that HashMap 'permits neither null keys nor null values', whereas the source material explicitly states that HashMap 'permits null values and the null key'.",
+      "failed_claim": "HashMap permits neither null keys nor null values: passing null to put throws a NullPointerException."
+    },
+    {
+      "topic": "HashMap",
+      "case": "planted-ordering",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card incorrectly states that HashMap iterates its entries in the order they were inserted, which contradicts the source material. The source explicitly states that HashMap does not guarantee any order of the map.",
+      "failed_claim": "HashMap iterates its entries in the order they were inserted, so iteration order is stable and can be relied upon."
+    },
+    {
+      "topic": "Loss aversion",
+      "case": "control-faithful",
+      "expected_pass": true,
+      "passed": true,
+      "correct": true,
+      "reason": "no confirmed contradiction across 11 excerpts of the source; 6 corroborated it - The excerpt confirms the card's specific claims about loss aversion, including the idea that losses weigh more heavily than equivalent gains, the concept of loss aversion being part of prospect theory, and the attributi",
+      "failed_claim": null
+    },
+    {
+      "topic": "Loss aversion",
+      "case": "planted-inverted",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "excerpt 7 of 11 contradicts the card, confirmed: The card claims that people weigh gains more heavily than equivalent losses, stating that gaining a sum of money produces a larger change in felt wellbeing than losing the same sum. However, the excerpt states that capuchins weighted losses more heavi",
+      "failed_claim": "Gaining a sum of money produces a larger change in felt wellbeing than losing the same sum does."
+    },
+    {
+      "topic": "Loss aversion",
+      "case": "planted-attribution",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "excerpt 3 of 11 contradicts the card, confirmed: The card incorrectly attributes the identification of loss aversion to B. F. Skinner in his 1953 work on operant conditioning. The excerpt does not mention Skinner or his 1953 work in relation to loss aversion. Instead, the excerpt discusses the endow",
+      "failed_claim": "Loss aversion is the tendency for a loss to weigh more heavily than an equivalent gain. It was first identified by B. F. Skinner in his 1953 work on operant conditioning."
+    },
+    {
+      "topic": "Loss aversion",
+      "case": "planted-figure",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "excerpt 1 of 11 contradicts the card, confirmed: The card claims the loss-aversion coefficient is about 0.5, meaning a loss weighs roughly half as much as an equal gain. However, the excerpt states that 'losses tend to be treated as if they were twice as large as an equivalent gain,' which directly ",
+      "failed_claim": "Loss aversion is the tendency for a loss to weigh more heavily than an equivalent gain. Empirical estimates put the loss-aversion coefficient at about 0.5, meaning a loss weighs roughly half as much as an equal gain."
+    },
+    {
+      "topic": "LinkedList",
+      "case": "live-true-both-directions",
+      "expected_pass": true,
+      "passed": true,
+      "correct": true,
+      "reason": "no confirmed contradiction across 16 excerpts of the source; 8 corroborated it; 1 contradiction(s) overruled on confirmation - The card correctly describes the structure of a doubly-linked list, stating that each node holds a value and pointers to both the next and previous nodes. The excerpt confir",
+      "failed_claim": null
+    },
+    {
+      "topic": "LinkedList",
+      "case": "live-false-lisp",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "excerpt 7 of 16 contradicts the card, confirmed: The card claims that doubly-linked lists are used in programming languages like LISP and in early AI systems because they make it easy to build and modify complex data structures. However, the excerpt states that doubly-linked lists do not allow tail-",
+      "failed_claim": "Doubly-linked lists are used in programming languages like LISP and in early AI systems because they make it easy to build and modify complex data structures."
+    },
+    {
+      "topic": "PriorityQueue",
+      "case": "live-true-heap-log-n",
+      "expected_pass": true,
+      "passed": false,
+      "correct": false,
+      "reason": "excerpt 2 of 10 contradicts the card, confirmed: The card claims that inserting and removing elements from a priority queue using a heap takes O(log n) time, which is efficient for large datasets. However, the excerpt explicitly states that using a sorted array with 'insert' and 'extract_max' operat",
+      "failed_claim": "Inserting and removing elements from a priority queue using a heap takes O(log n) time, making it efficient for large datasets."
+    },
+    {
+      "topic": "PriorityQueue",
+      "case": "live-true-bst-alternative",
+      "expected_pass": true,
+      "passed": false,
+      "correct": false,
+      "reason": "excerpt 5 of 10 contradicts the card, confirmed: The card claims that priority queues 'usually rely on heaps for better performance' and that 'trees allow for O(log n) time complexity for insertion and deletion'. However, the excerpt states that priority queues can be implemented with O(1) pull time",
+      "failed_claim": "Priority queues can be implemented with other structures like self-balancing binary search trees, but they usually rely on heaps for better performance. These trees allow for O(log n) time complexity for insertion and deletion."
+    }
+  ]
+}

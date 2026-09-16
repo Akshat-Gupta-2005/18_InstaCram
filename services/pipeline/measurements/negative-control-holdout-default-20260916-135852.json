@@ -1,0 +1,74 @@
+{
+  "generated_at": "2026-09-16T13:58:52.119174+00:00",
+  "planted_errors": 4,
+  "planted_caught": 4,
+  "detection_rate": 1.0,
+  "controls": 3,
+  "controls_passed": 2,
+  "checker_errors": 0,
+  "results": [
+    {
+      "topic": "Anchoring",
+      "case": "holdout-true-arbitrary-number",
+      "expected_pass": true,
+      "passed": true,
+      "correct": true,
+      "reason": "no confirmed contradiction across 13 excerpts of the source; 7 corroborated it - The excerpt confirms the card's claim that in anchoring experiments, an arbitrary number shown to participants can pull their later numerical estimates toward that number, even when they know it is irrelevant. The excer",
+      "failed_claim": null
+    },
+    {
+      "topic": "Anchoring",
+      "case": "holdout-lie-inverted",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "excerpt 1 of 13 contradicts the card: The card claims that anchoring is the tendency to give the first piece of information offered almost no weight, so an initial value has little effect on later estimates. However, the excerpt states that anchoring is the tendency to be influenced by an anchor, an",
+      "failed_claim": "Anchoring is the tendency to give the first piece of information offered almost no weight, so an initial value has little effect on later estimates."
+    },
+    {
+      "topic": "Anchoring",
+      "case": "holdout-lie-attribution",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "excerpt 1 of 13 contradicts the card: The card incorrectly attributes the discovery of the anchoring effect to Sigmund Freud in 1920. The excerpt clearly states that the anchoring effect was formalized in behavioral economics by Amos Tversky and Daniel Kahneman in their 1974 work, and that its origi",
+      "failed_claim": "The anchoring effect was first described by Sigmund Freud in 1920, in his work on unconscious bias in judgement."
+    },
+    {
+      "topic": "Endowment effect",
+      "case": "holdout-true-mug-experiment",
+      "expected_pass": true,
+      "passed": false,
+      "correct": false,
+      "reason": "excerpt 2 of 9 contradicts the card: The card claims that people who were given a mug typically asked for more money to sell it than other people were willing to pay to buy one. However, the excerpt specifically discusses the endowment effect in the context of NCAA tournament tickets, where particip",
+      "failed_claim": "people who were given a mug typically asked for more money to sell it than other people were willing to pay to buy one"
+    },
+    {
+      "topic": "Endowment effect",
+      "case": "holdout-lie-inverted",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "excerpt 1 of 9 contradicts the card: The card incorrectly states that the endowment effect is the tendency to value an object less once you own it, so owners typically ask lower prices than buyers are willing to pay. However, the excerpt clearly states that owners typically ask higher prices than bu",
+      "failed_claim": "The endowment effect is the tendency to value an object less once you own it, so owners typically ask lower prices than buyers are willing to pay."
+    },
+    {
+      "topic": "Queue",
+      "case": "holdout-true-circular-buffer",
+      "expected_pass": true,
+      "passed": true,
+      "correct": true,
+      "reason": "The card correctly states that a queue built on a circular buffer can add an element at the back and remove one from the front in constant time. This is consistent with the definition of a queue as an abstract data type and the behavior of a circular buffer.",
+      "failed_claim": null
+    },
+    {
+      "topic": "Queue",
+      "case": "holdout-lie-lifo",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card incorrectly states that a queue follows last-in, first-out order, which is the behavior of a stack, not a queue. The source material does not support this claim and it contradicts standard computer science knowledge.",
+      "failed_claim": "A queue follows last-in, first-out order: the element added most recently is the first one removed."
+    }
+  ]
+}

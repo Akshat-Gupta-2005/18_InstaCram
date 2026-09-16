@@ -22,6 +22,7 @@ a rejection here is not evidence of over-strictness either.
 
     .venv/Scripts/python scripts/negative_control.py
     .venv/Scripts/python scripts/negative_control.py --confirm   (measure the confirmation step)
+    .venv/Scripts/python scripts/negative_control.py --set holdout [--confirm]
 """
 
 from __future__ import annotations
@@ -183,15 +184,107 @@ PRIORITY_QUEUE: list[Case] = [
     ),
 ]
 
-SUBJECTS = [
-    ("HashMap", "Java Collections", HASHMAP),
-    ("Loss aversion", "Behavioural Economics", LOSS_AVERSION),
-    ("LinkedList", "Java Data Structures", LINKED_LIST),
-    ("PriorityQueue", "Java Data Structures", PRIORITY_QUEUE),
+# ---------------------------------------------------------------- HELD-OUT SET
+#
+# Written BEFORE the second confirmation prompt, and never to be shown to it or
+# used to tune it. The first confirmation prompt used the linked-list and
+# priority-queue cases above as its own examples and then scored 5/5 on them,
+# which measured memory, not judgement. These cases are on topics the prompts do
+# not mention, and are run once per prompt version; tuning a prompt until they
+# pass would turn them into a second development set and the number into the
+# same illusion.
+#
+# Each true card is shaped like a live false rejection: the source says MORE than
+# the card, or also describes a different variant. Each lie is shaped like a
+# planted error the gate must keep catching: an inversion, a wrong attribution.
+ANCHORING: list[Case] = [
+    (
+        "holdout-true-arbitrary-number",
+        (
+            "In anchoring experiments, an arbitrary number shown to participants can "
+            "pull their later numerical estimates toward that number, even when they "
+            "know it is irrelevant."
+        ),
+        True,
+    ),
+    (
+        "holdout-lie-inverted",
+        (
+            "Anchoring is the tendency to give the first piece of information offered "
+            "almost no weight, so an initial value has little effect on later estimates."
+        ),
+        False,
+    ),
+    (
+        "holdout-lie-attribution",
+        (
+            "The anchoring effect was first described by Sigmund Freud in 1920, in his "
+            "work on unconscious bias in judgement."
+        ),
+        False,
+    ),
 ]
+
+ENDOWMENT: list[Case] = [
+    (
+        "holdout-true-mug-experiment",
+        (
+            "In classic experiments, people who were given a mug typically asked for "
+            "more money to sell it than other people were willing to pay to buy one."
+        ),
+        True,
+    ),
+    (
+        "holdout-lie-inverted",
+        (
+            "The endowment effect is the tendency to value an object less once you own "
+            "it, so owners typically ask lower prices than buyers are willing to pay."
+        ),
+        False,
+    ),
+]
+
+QUEUE: list[Case] = [
+    (
+        "holdout-true-circular-buffer",
+        (
+            "A queue built on a circular buffer can add an element at the back and "
+            "remove one from the front in constant time."
+        ),
+        True,
+    ),
+    (
+        "holdout-lie-lifo",
+        (
+            "A queue follows last-in, first-out order: the element added most recently "
+            "is the first one removed."
+        ),
+        False,
+    ),
+]
+
+SUBJECT_SETS = {
+    "dev": [
+        ("HashMap", "Java Collections", HASHMAP),
+        ("Loss aversion", "Behavioural Economics", LOSS_AVERSION),
+        ("LinkedList", "Java Data Structures", LINKED_LIST),
+        ("PriorityQueue", "Java Data Structures", PRIORITY_QUEUE),
+    ],
+    "holdout": [
+        ("Anchoring", "Behavioural Economics", ANCHORING),
+        ("Endowment effect", "Behavioural Economics", ENDOWMENT),
+        ("Queue", "Java Data Structures", QUEUE),
+    ],
+}
 
 
 async def main() -> int:
+    case_set = sys.argv[sys.argv.index("--set") + 1] if "--set" in sys.argv else "dev"
+    if case_set not in SUBJECT_SETS:
+        print(f"unknown --set {case_set!r}; choose from {sorted(SUBJECT_SETS)}", file=sys.stderr)
+        return 2
+    print(f"case set: {case_set}")
+
     if "--confirm" in sys.argv:
         # Measures the confirmation step, which is off in production
         # (FACT_CHECK_CONFIRM). Set on the agent module: config is bound at import.
@@ -209,7 +302,7 @@ async def main() -> int:
     results: list[dict] = []
 
     async with client:
-        for topic, field, cases in SUBJECTS:
+        for topic, field, cases in SUBJECT_SETS[case_set]:
             grounding = await ground_topic(
                 topic, field, sources=default_sources(client)
             )
@@ -238,7 +331,10 @@ async def main() -> int:
                 results.append({
                     "topic": topic, "case": label,
                     "expected_pass": should_pass, "passed": verdict.passed,
-                    "correct": correct, "reason": verdict.reason[:300],
+                    # Kept whole. At 300 chars the confirmation's part of the
+                    # reason - WHICH sentences it compared - was cut off, which
+                    # is precisely what diagnosing a wrong verdict needs.
+                    "correct": correct, "reason": verdict.reason,
                     "failed_claim": verdict.failed_claim,
                 })
 
@@ -260,7 +356,9 @@ async def main() -> int:
     }
 
     OUT_DIR.mkdir(exist_ok=True)
-    path = OUT_DIR / f"negative-control-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}.json"
+    mode = "confirm" if "--confirm" in sys.argv else "default"
+    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+    path = OUT_DIR / f"negative-control-{case_set}-{mode}-{stamp}.json"
     path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
 
     print("\n" + "=" * 62)

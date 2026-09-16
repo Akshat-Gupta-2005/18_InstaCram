@@ -1,0 +1,74 @@
+{
+  "generated_at": "2026-09-16T14:30:01.144239+00:00",
+  "planted_errors": 4,
+  "planted_caught": 4,
+  "detection_rate": 1.0,
+  "controls": 3,
+  "controls_passed": 2,
+  "checker_errors": 0,
+  "results": [
+    {
+      "topic": "Anchoring",
+      "case": "holdout-true-arbitrary-number",
+      "expected_pass": true,
+      "passed": true,
+      "correct": true,
+      "reason": "no confirmed contradiction across 13 excerpts of the source; 7 corroborated it - The card correctly states that in anchoring experiments, an arbitrary number shown to participants can pull their later numerical estimates toward that number, even when they know it is irrelevant. The excerpt supports ",
+      "failed_claim": null
+    },
+    {
+      "topic": "Anchoring",
+      "case": "holdout-lie-inverted",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "excerpt 1 of 13 contradicts the card, confirmed: The card claims that anchoring is the tendency to give the first piece of information offered almost no weight, so an initial value has little effect on later estimates. However, the excerpt states that anchoring is the tendency to rely on an initial ",
+      "failed_claim": "Anchoring is the tendency to give the first piece of information offered almost no weight, so an initial value has little effect on later estimates."
+    },
+    {
+      "topic": "Anchoring",
+      "case": "holdout-lie-attribution",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card incorrectly attributes the first description of the anchoring effect to Sigmund Freud in 1920, whereas the source material clearly states that the anchoring effect was formalized in behavioral economics by Amos Tversky and Daniel Kahneman in their 1974 work. The card's claim contradicts the",
+      "failed_claim": "The anchoring effect was first described by Sigmund Freud in 1920, in his work on unconscious bias in judgement."
+    },
+    {
+      "topic": "Endowment effect",
+      "case": "holdout-true-mug-experiment",
+      "expected_pass": true,
+      "passed": false,
+      "correct": false,
+      "reason": "excerpt 2 of 9 contradicts the card, confirmed: The card claims that people who were given a mug typically asked for more money to sell it than other people were willing to pay to buy one. However, the excerpt provides an example where participants' hypothetical selling price (WTA) for NCAA final fo",
+      "failed_claim": "people who were given a mug typically asked for more money to sell it than other people were willing to pay to buy one"
+    },
+    {
+      "topic": "Endowment effect",
+      "case": "holdout-lie-inverted",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "excerpt 2 of 9 contradicts the card, confirmed: The card claims that the endowment effect is the tendency to value an object less once you own it, so owners typically ask lower prices than buyers are willing to pay. However, the excerpt states that participants' hypothetical selling price (WTA) for ",
+      "failed_claim": "The endowment effect is the tendency to value an object less once you own it, so owners typically ask lower prices than buyers are willing to pay."
+    },
+    {
+      "topic": "Queue",
+      "case": "holdout-true-circular-buffer",
+      "expected_pass": true,
+      "passed": true,
+      "correct": true,
+      "reason": "The card correctly states that a queue built on a circular buffer can add an element at the back and remove one from the front in constant time. This is a standard property of a circular queue, which is mentioned in the source material as a type of queue (abstract data type).",
+      "failed_claim": null
+    },
+    {
+      "topic": "Queue",
+      "case": "holdout-lie-lifo",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card incorrectly states that a queue follows last-in, first-out (LIFO) order, which is actually the behavior of a stack. The source material does not mention LIFO for queues, and this claim contradicts standard computer science knowledge.",
+      "failed_claim": "A queue follows last-in, first-out order: the element added most recently is the first one removed."
+    }
+  ]
+}

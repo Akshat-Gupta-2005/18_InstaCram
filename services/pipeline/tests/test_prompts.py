@@ -60,14 +60,26 @@ def test_confirm_prompt_exposes_its_placeholders() -> None:
         assert var in prompt
 
 
-def test_confirm_prompt_names_the_failure_shapes_seen_live() -> None:
-    """The confirmation call exists because of two specific false-rejection
-    shapes from live data. If either instruction is deleted, the call reverts to
-    re-asking the question the chunk pass already got wrong."""
+def test_confirm_prompt_compares_sentences_not_topics() -> None:
+    """v1 judged the topic ("this supports the claim about loss aversion") and let
+    3 of 8 planted lies through. These are the instructions that address that."""
     prompt = " ".join(load_prompt("fact-check-confirm.md").lower().split())
-    assert "different implementation" in prompt
-    assert "adds information" in prompt
-    assert "when unsure, answer false" in prompt
+    assert "sentences, not two topics" in prompt
+    assert "support a topic in general and still contradict" in prompt
+
+
+def test_confirm_prompt_never_mentions_a_topic_it_is_measured_on() -> None:
+    """Teaching to the test, made structural. v1's examples WERE the development
+    cases, so its 5/5 on them measured recall of its own instructions. Any topic
+    from the negative control's development or held-out set appearing in this
+    prompt fails here."""
+    prompt = load_prompt("fact-check-confirm.md").lower()
+    measured_topics = [
+        "hashmap", "hash map", "loss aversion", "linked", "priority queue", "heap",
+        "anchoring", "endowment", "queue", "lisp", "capuchin", "mug",
+    ]
+    leaked = [t for t in measured_topics if t in prompt]
+    assert leaked == [], f"confirmation prompt mentions measured topics: {leaked}"
 
 
 def test_confirm_prompt_puts_the_claim_before_the_excerpt() -> None:
@@ -116,7 +128,13 @@ OUTPUT_KEYS = {
         "supported",
         "not_covered",
     ],
-    "fact-check-confirm.md": ["confirmed", "reason"],
+    "fact-check-confirm.md": [
+        "claim_sentence",
+        "excerpt_sentence",
+        "same_subject",
+        "cannot_both_be_true",
+        "reason",
+    ],
 }
 
 

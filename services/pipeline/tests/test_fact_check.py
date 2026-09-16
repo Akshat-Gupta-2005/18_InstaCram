@@ -35,8 +35,17 @@ CONTRADICTED = {
     "failed_claim": "constant-time performance",
 }
 
-CONFIRMED = {"confirmed": True, "reason": "the excerpt states lookups are O(log n) for HashMap"}
-OVERRULED = {"confirmed": False, "reason": "the excerpt describes a different implementation"}
+CONFIRMED = {
+    "claim_sentence": "HashMap offers constant-time performance for get and put.",
+    "excerpt_sentence": "get and put run in O(log n)",
+    "same_subject": True,
+    "cannot_both_be_true": True,
+    "reason": "the excerpt gives a different bound for the same operations",
+}
+# Both ways of NOT confirming: the statements can coexist, or they are about
+# different things. v1 of the confirmation blurred these into one question.
+OVERRULED = {**CONFIRMED, "cannot_both_be_true": False, "reason": "the excerpt adds a detail"}
+DIFFERENT_SUBJECT = {**CONFIRMED, "same_subject": False, "reason": "a different implementation"}
 
 # The chunk prompt's excerpt heading. Matched as a pattern rather than by the
 # bare word, which also appears in the instructions ABOVE the card.
@@ -279,9 +288,32 @@ async def test_only_a_real_boolean_confirms(small_chunks, confirm_on, monkeypatc
     """A string "true" is the checker failing to follow its output contract, and
     a checker failing must never be what rejects a card."""
     use(monkeypatch, Stub(CONTRADICTED, SUPPORTED, repeat=NOT_COVERED,
-                          confirm=[{"confirmed": "true", "reason": "x"}]))
+                          confirm=[{**CONFIRMED, "same_subject": "true"}]))
     verdict = await check(LONG_SOURCE)
     assert verdict.passed
+
+
+@pytest.mark.asyncio
+async def test_opposite_statements_about_different_subjects_do_not_confirm(
+    small_chunks, confirm_on, monkeypatch
+) -> None:
+    """The live false-rejection shape: a statement that could not be true of the
+    card's subject, but is about a different variant of it."""
+    use(monkeypatch, Stub(CONTRADICTED, SUPPORTED, repeat=NOT_COVERED, confirm=[DIFFERENT_SUBJECT]))
+    verdict = await check(LONG_SOURCE)
+    assert verdict.passed
+
+
+@pytest.mark.asyncio
+async def test_a_confirmed_rejection_names_the_sentences_compared(
+    small_chunks, confirm_on, monkeypatch
+) -> None:
+    """So a human reading the quarantine can see WHICH sentences were judged
+    incompatible - the thing v1's reasons never showed."""
+    use(monkeypatch, Stub(CONTRADICTED, repeat=SUPPORTED, confirm=[CONFIRMED]))
+    verdict = await check(LONG_SOURCE)
+    assert CONFIRMED["claim_sentence"] in verdict.reason
+    assert CONFIRMED["excerpt_sentence"] in verdict.reason
 
 
 @pytest.mark.asyncio

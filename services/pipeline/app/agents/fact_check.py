@@ -249,7 +249,10 @@ async def _check_chunked(
         return Verdict(
             passed=True,
             reason=(
-                f"no confirmed contradiction across {total} excerpts of the source; "
+                # "confirmed" only when confirmation actually ran: with it off, the
+                # wording would claim a check that never happened.
+                f"no {'confirmed ' if FACT_CHECK_CONFIRM else ''}contradiction "
+                f"across {total} excerpts of the source; "
                 f"{len(supported)} corroborated it{overruled_note} - {supported[0].reason}"
             ),
             failed_claim=None,
@@ -304,13 +307,26 @@ async def _confirm_contradiction(
     if not isinstance(data, dict):
         raise LLMError(f"confirmation returned {type(data).__name__}, expected an object")
 
-    raw = data.get("confirmed")
-    # Strict: only a real boolean true confirms. A string "true", a missing key or
-    # anything else is the checker failing to answer, which must not reject a card.
-    if raw is not True and raw is not False:
-        raise LLMError(f"confirmation returned an unusable value: {raw!r}")
+    same_subject = data.get("same_subject")
+    opposite = data.get("cannot_both_be_true")
+    # Strict: only real booleans count. A string "true", a missing key or anything
+    # else is the checker failing to answer, which must not reject a card.
+    if not isinstance(same_subject, bool) or not isinstance(opposite, bool):
+        raise LLMError(
+            "confirmation returned unusable values: "
+            f"same_subject={same_subject!r}, cannot_both_be_true={opposite!r}"
+        )
 
-    return Confirmation(confirmed=raw, reason=str(data.get("reason", "")).strip() or "no reason given")
+    # Combined HERE rather than asked of the model as one question. v1 asked one
+    # question and the model blurred the two halves - it judged the topic instead
+    # of the sentence and let 3 of 8 planted lies through.
+    reason = str(data.get("reason", "")).strip() or "no reason given"
+    claim_sentence = str(data.get("claim_sentence", "")).strip()
+    excerpt_sentence = str(data.get("excerpt_sentence", "")).strip()
+    if claim_sentence or excerpt_sentence:
+        reason = f"{reason} [claim: {claim_sentence!r} | excerpt: {excerpt_sentence!r}]"
+
+    return Confirmation(confirmed=same_subject and opposite, reason=reason)
 
 
 async def _check_chunk(
