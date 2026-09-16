@@ -112,6 +112,18 @@ FACT_CHECK_SINGLE_PASS_CHARS = int(_env("FACT_CHECK_SINGLE_PASS_CHARS", "10000")
 # excerpt. A larger excerpt simply dilutes attention across more text.
 FACT_CHECK_CHUNK_CHARS = int(_env("FACT_CHECK_CHUNK_CHARS", "4000"))
 
+# Whether a chunk's "contradicted" must be confirmed by a second, narrower call
+# before a card is rejected. OFF, deliberately, and not because the idea failed
+# outright. On the negative control the old gate caught 8/8 planted lies and kept
+# only 2/5 true cards; the first confirmation prompt kept 5/5 true cards but let
+# 3 of the 8 lies through, judging whether an excerpt was about the same TOPIC
+# rather than whether it said the opposite of the claim. And that 5/5 was
+# inflated: the prompt's examples were the very test cases. For a product whose
+# promise is verified cards, a lie reaching a learner is worse than a lost card,
+# so production keeps the gate that catches lies while the confirmation is
+# reworked and measured on held-out cases. Turn on only for measurement.
+FACT_CHECK_CONFIRM = _env("FACT_CHECK_CONFIRM", "off").lower() == "on"
+
 # Chunks overlap so a claim spanning a boundary is whole in at least one of them.
 # Without it, splitting mid-sentence would let a contradiction fall through the
 # crack between two chunks and be reported by neither.

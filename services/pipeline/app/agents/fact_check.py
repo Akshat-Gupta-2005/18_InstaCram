@@ -39,6 +39,7 @@ from app.chunking import split
 from app.config import (
     FACT_CHECK_CHUNK_CHARS,
     FACT_CHECK_CHUNK_OVERLAP,
+    FACT_CHECK_CONFIRM,
     FACT_CHECK_SINGLE_PASS_CHARS,
     SCRAPE_CHAR_BUDGET,
 )
@@ -47,6 +48,7 @@ from app.prompts import load_prompt, render
 
 PROMPT_FILE = "fact-check.md"
 CHUNK_PROMPT_FILE = "fact-check-chunk.md"
+CONFIRM_PROMPT_FILE = "fact-check-confirm.md"
 
 CHUNK_VERDICTS = frozenset({"contradicted", "supported", "not_covered"})
 
@@ -165,8 +167,11 @@ async def _check_chunked(
 
     supported: list[ChunkVerdict] = []
     errors: list[str] = []
+    overruled = 0
+    calls = 0
 
     for i, chunk in enumerate(chunks, start=1):
+        calls += 1
         try:
             result = await _check_chunk(
                 client, card_content=card_content, excerpt=chunk,
@@ -179,15 +184,53 @@ async def _check_chunked(
             errors.append(f"excerpt {i}/{total}: {exc}")
             continue
 
-        if result.contradicts:
-            # Decisive on its own, so stop: every further call costs the same as
-            # this one and cannot change the outcome.
+        if result.contradicts and not FACT_CHECK_CONFIRM:
+            # The production path (see FACT_CHECK_CONFIRM in config): decisive on
+            # its own, so stop - every further call costs the same and cannot
+            # change the outcome.
             return Verdict(
                 passed=False,
                 reason=f"excerpt {i} of {total} contradicts the card: {result.reason}",
                 failed_claim=result.failed_claim,
-                chunks_checked=i,
+                chunks_checked=calls,
             )
+
+        if result.contradicts:
+            # Only with FACT_CHECK_CONFIRM on. Of the first four live rejections
+            # on this path, three were false: the excerpt discussed something the
+            # card did not claim - more detail, or a different implementation -
+            # and the chunk pass called it a contradiction despite its prompt
+            # forbidding exactly that. A second, narrower question has to agree.
+            calls += 1
+            try:
+                confirmed = await _confirm_contradiction(
+                    client,
+                    card_content=card_content,
+                    claim=result.failed_claim or card_content,
+                    excerpt=chunk,
+                    model=model,
+                )
+            except LLMError as exc:
+                # Unconfirmed is not confirmed. With no retry, rejecting a card on
+                # a check that could not complete is the expensive direction.
+                errors.append(f"confirming excerpt {i}/{total}: {exc}")
+                continue
+
+            if confirmed.confirmed:
+                # Decisive now, so stop: every further call costs the same and
+                # cannot change the outcome.
+                return Verdict(
+                    passed=False,
+                    reason=(
+                        f"excerpt {i} of {total} contradicts the card, confirmed: "
+                        f"{result.reason} | confirmation: {confirmed.reason}"
+                    ),
+                    failed_claim=result.failed_claim,
+                    chunks_checked=calls,
+                )
+            overruled += 1
+            continue
+
         if result.verdict == "supported":
             supported.append(result)
 
@@ -196,15 +239,21 @@ async def _check_chunked(
         # here would mean passing a card on the strength of calls that failed.
         raise LLMError("; ".join(errors))
 
+    # Recorded in the reason because an overruled contradiction is exactly the
+    # evidence the "is the checker too strict?" question needs (P10).
+    overruled_note = (
+        f"; {overruled} contradiction(s) overruled on confirmation" if overruled else ""
+    )
+
     if supported:
         return Verdict(
             passed=True,
             reason=(
-                f"no contradiction found across {total} excerpts of the source; "
-                f"{len(supported)} corroborated it - {supported[0].reason}"
+                f"no confirmed contradiction across {total} excerpts of the source; "
+                f"{len(supported)} corroborated it{overruled_note} - {supported[0].reason}"
             ),
             failed_claim=None,
-            chunks_checked=total,
+            chunks_checked=calls,
         )
 
     # Every excerpt said "not covered": no part of the source speaks to this card
@@ -220,8 +269,48 @@ async def _check_chunked(
         scraped=scraped[:SCRAPE_CHAR_BUDGET],
         generated=generated,
         model=model,
-        chunks_checked=total + 1,
+        chunks_checked=calls + 1,
     )
+
+
+@dataclass(frozen=True)
+class Confirmation:
+    confirmed: bool
+    reason: str
+
+
+async def _confirm_contradiction(
+    client: httpx.AsyncClient,
+    *,
+    card_content: str,
+    claim: str,
+    excerpt: str,
+    model: str,
+) -> Confirmation:
+    """Asks only whether THIS excerpt says THIS claim is false, about the same subject.
+
+    Narrower than the chunk pass on purpose: one claim, one excerpt, one question,
+    and the failure shapes seen live named as not-contradictions. "When unsure,
+    false" - see prompts/fact-check-confirm.md for why doubt favours the card.
+    """
+    prompt = render(
+        load_prompt(CONFIRM_PROMPT_FILE),
+        card_content=card_content,
+        claim=claim,
+        excerpt=excerpt,
+    )
+    data = await complete_json(client, prompt, max_tokens=_budget(model), model=model)
+
+    if not isinstance(data, dict):
+        raise LLMError(f"confirmation returned {type(data).__name__}, expected an object")
+
+    raw = data.get("confirmed")
+    # Strict: only a real boolean true confirms. A string "true", a missing key or
+    # anything else is the checker failing to answer, which must not reject a card.
+    if raw is not True and raw is not False:
+        raise LLMError(f"confirmation returned an unusable value: {raw!r}")
+
+    return Confirmation(confirmed=raw, reason=str(data.get("reason", "")).strip() or "no reason given")
 
 
 async def _check_chunk(

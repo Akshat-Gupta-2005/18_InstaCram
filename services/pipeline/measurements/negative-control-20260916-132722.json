@@ -1,0 +1,128 @@
+{
+  "generated_at": "2026-09-16T13:27:22.786519+00:00",
+  "planted_errors": 8,
+  "planted_caught": 5,
+  "detection_rate": 0.625,
+  "controls": 5,
+  "controls_passed": 5,
+  "checker_errors": 0,
+  "results": [
+    {
+      "topic": "HashMap",
+      "case": "control-faithful",
+      "expected_pass": true,
+      "passed": true,
+      "correct": true,
+      "reason": "The card accurately restates the key facts from the source material about HashMap's performance, null support, and general behavior. It does not contradict the source material or make unsupported claims.",
+      "failed_claim": null
+    },
+    {
+      "topic": "HashMap",
+      "case": "planted-thread-safety",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card claims that HashMap is 'synchronized internally' and 'several threads may modify the same HashMap concurrently without any external synchronization', which contradicts the source material. The source material clearly states that HashMap is 'not synchronized' and requires external synchroniz",
+      "failed_claim": "HashMap is the hash-table backed implementation of the Map interface. It is synchronized internally, so several threads may modify the same HashMap concurrently without any external synchronization."
+    },
+    {
+      "topic": "HashMap",
+      "case": "planted-complexity",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card incorrectly states that HashMap operations run in O(log n) time. The source material clearly states that get and put operations run in constant-time (O(1)), assuming the hash function disperses elements properly among buckets.",
+      "failed_claim": "Its get and put operations run in O(log n) time, because entries are held in a balanced tree ordered by key."
+    },
+    {
+      "topic": "HashMap",
+      "case": "planted-nulls",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card incorrectly states that HashMap 'permits neither null keys nor null values', whereas the source material clearly states that HashMap 'permits null values and the null key'.",
+      "failed_claim": "HashMap is the hash-table backed implementation of the Map interface. It permits neither null keys nor null values: passing null to put throws a NullPointerException."
+    },
+    {
+      "topic": "HashMap",
+      "case": "planted-ordering",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card incorrectly claims that HashMap iterates its entries in the order they were inserted, which contradicts the source material. The source material explicitly states that HashMap does not guarantee any specific order of the map.",
+      "failed_claim": "It iterates its entries in the order they were inserted, so iteration order is stable and can be relied upon."
+    },
+    {
+      "topic": "Loss aversion",
+      "case": "control-faithful",
+      "expected_pass": true,
+      "passed": true,
+      "correct": true,
+      "reason": "no confirmed contradiction across 11 excerpts of the source; 7 corroborated it - The excerpt confirms the card's specific claims about loss aversion, including that losses weigh more heavily than gains, that losses are treated as if they were twice as large as equivalent gains, and that loss aversio",
+      "failed_claim": null
+    },
+    {
+      "topic": "Loss aversion",
+      "case": "planted-inverted",
+      "expected_pass": false,
+      "passed": true,
+      "correct": false,
+      "reason": "no confirmed contradiction across 11 excerpts of the source; 5 corroborated it; 1 contradiction(s) overruled on confirmation - The excerpt confirms the card's specific claims about loss aversion, including the idea that losses are weighted more heavily than gains, the reference to Amos Tversky and D",
+      "failed_claim": null
+    },
+    {
+      "topic": "Loss aversion",
+      "case": "planted-attribution",
+      "expected_pass": false,
+      "passed": false,
+      "correct": true,
+      "reason": "The card incorrectly attributes the identification of loss aversion to B. F. Skinner, whereas the source material and general knowledge clearly state that loss aversion was first proposed by Amos Tversky and Daniel Kahneman.",
+      "failed_claim": "Loss aversion is the tendency for a loss to weigh more heavily than an equivalent gain. It was first identified by B. F. Skinner in his 1953 work on operant conditioning."
+    },
+    {
+      "topic": "Loss aversion",
+      "case": "planted-figure",
+      "expected_pass": false,
+      "passed": true,
+      "correct": false,
+      "reason": "no confirmed contradiction across 11 excerpts of the source; 3 corroborated it; 3 contradiction(s) overruled on confirmation - The excerpt confirms the card's specific claims about loss aversion, including the definition, the loss-aversion coefficient (losses being twice as impactful as gains), and ",
+      "failed_claim": null
+    },
+    {
+      "topic": "LinkedList",
+      "case": "live-true-both-directions",
+      "expected_pass": true,
+      "passed": true,
+      "correct": true,
+      "reason": "no confirmed contradiction across 16 excerpts of the source; 7 corroborated it; 1 contradiction(s) overruled on confirmation - The excerpt confirms that each node in a linked list contains data and a reference to the next node, which aligns with the card's claim that each node holds a value and poin",
+      "failed_claim": null
+    },
+    {
+      "topic": "LinkedList",
+      "case": "live-false-lisp",
+      "expected_pass": false,
+      "passed": true,
+      "correct": false,
+      "reason": "no confirmed contradiction across 16 excerpts of the source; 1 corroborated it; 6 contradiction(s) overruled on confirmation - The excerpt confirms that doubly-linked lists are used in systems like TSS/360 and mentions their use in maintaining references to active processes, which aligns with the ca",
+      "failed_claim": null
+    },
+    {
+      "topic": "PriorityQueue",
+      "case": "live-true-heap-log-n",
+      "expected_pass": true,
+      "passed": true,
+      "correct": true,
+      "reason": "no confirmed contradiction across 10 excerpts of the source; 1 corroborated it; 4 contradiction(s) overruled on confirmation - The excerpt confirms that inserting and removing elements from a priority queue using a heap takes O(log n) time, and that the heap maintains the priority order through a bi",
+      "failed_claim": null
+    },
+    {
+      "topic": "PriorityQueue",
+      "case": "live-true-bst-alternative",
+      "expected_pass": true,
+      "passed": true,
+      "correct": true,
+      "reason": "no confirmed contradiction across 10 excerpts of the source; 1 corroborated it; 2 contradiction(s) overruled on confirmation - The excerpt confirms that priority queues can be implemented with other structures like self-balancing binary search trees, and it also states that heaps are commonly used f",
+      "failed_claim": null
+    }
+  ]
+}

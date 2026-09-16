@@ -35,13 +35,19 @@ CONTRADICTED = {
     "failed_claim": "constant-time performance",
 }
 
+CONFIRMED = {"confirmed": True, "reason": "the excerpt states lookups are O(log n) for HashMap"}
+OVERRULED = {"confirmed": False, "reason": "the excerpt describes a different implementation"}
+
 # The chunk prompt's excerpt heading. Matched as a pattern rather than by the
 # bare word, which also appears in the instructions ABOVE the card.
 EXCERPT_HEADING = re.compile(r"EXCERPT \d+ OF \d+:")
+# The confirmation prompt's marker. Checked FIRST: that prompt contains an
+# excerpt too, and must not be mistaken for a chunk call.
+CONFIRM_MARKER = "CLAIM UNDER DISPUTE:"
 
 
 class Stub:
-    """Replies to chunk calls and single-pass calls from separate queues.
+    """Replies to chunk, confirmation and single-pass calls from separate queues.
 
     Dispatching on the prompt matters: a test that queues replies positionally
     breaks whenever the chunk count changes, which made earlier versions of these
@@ -50,23 +56,39 @@ class Stub:
     many verdicts it cares about rather than how many chunks the splitter made.
     """
 
-    def __init__(self, *chunks: object, repeat: object = None, whole: list | None = None) -> None:
+    def __init__(
+        self,
+        *chunks: object,
+        repeat: object = None,
+        whole: list | None = None,
+        confirm: list | None = None,
+    ) -> None:
         self.chunk_queue = list(chunks)
         self.repeat = repeat
         self.whole_queue = list(whole or [])
+        self.confirm_queue = list(confirm or [])
         self.prompts: list[str] = []
+
+    @staticmethod
+    def kind_of(prompt: str) -> str:
+        if CONFIRM_MARKER in prompt:
+            return "confirm"
+        return "chunk" if EXCERPT_HEADING.search(prompt) else "single-pass"
 
     async def __call__(self, _client, prompt, **_kw):
         self.prompts.append(prompt)
-        is_chunk = bool(EXCERPT_HEADING.search(prompt))
-        queue = self.chunk_queue if is_chunk else self.whole_queue
+        kind = self.kind_of(prompt)
+        queue = {
+            "confirm": self.confirm_queue,
+            "chunk": self.chunk_queue,
+            "single-pass": self.whole_queue,
+        }[kind]
 
         if queue:
             reply = queue.pop(0)
-        elif is_chunk and self.repeat is not None:
+        elif kind == "chunk" and self.repeat is not None:
             reply = self.repeat
         else:
-            kind = "chunk" if is_chunk else "single-pass"
             raise AssertionError(f"unexpected {kind} call - the test queued no reply for it")
 
         if isinstance(reply, Exception):
@@ -79,7 +101,11 @@ class Stub:
 
     @property
     def chunk_calls(self) -> int:
-        return sum(1 for p in self.prompts if EXCERPT_HEADING.search(p))
+        return sum(1 for p in self.prompts if self.kind_of(p) == "chunk")
+
+    @property
+    def confirm_prompts(self) -> list[str]:
+        return [p for p in self.prompts if self.kind_of(p) == "confirm"]
 
 
 @pytest.fixture
@@ -93,6 +119,14 @@ def small_chunks(monkeypatch):
     monkeypatch.setattr(fact_check, "FACT_CHECK_SINGLE_PASS_CHARS", 100)
     monkeypatch.setattr(fact_check, "FACT_CHECK_CHUNK_CHARS", 100)
     monkeypatch.setattr(fact_check, "FACT_CHECK_CHUNK_OVERLAP", 10)
+
+
+@pytest.fixture
+def confirm_on(monkeypatch):
+    """The confirmation step is OFF in production (see FACT_CHECK_CONFIRM): it cut
+    false rejections but let planted lies through. Its tests turn it on; the
+    default is pinned separately below, so production cannot switch silently."""
+    monkeypatch.setattr(fact_check, "FACT_CHECK_CONFIRM", True)
 
 
 def use(monkeypatch, stub: Stub) -> Stub:
@@ -148,6 +182,27 @@ async def test_a_source_that_fits_one_call_is_not_chunked(monkeypatch) -> None:
 
 # ------------------------------------------------------------------ chunked
 
+def test_production_rejects_without_confirmation_by_default() -> None:
+    """Pinned because the choice is deliberate: measured, the gate WITHOUT
+    confirmation caught 8/8 planted lies; with the first confirmation prompt, 5/8.
+    Flipping the default must be a visible change to this test."""
+    from app import config
+
+    assert config.FACT_CHECK_CONFIRM is False
+
+
+@pytest.mark.asyncio
+async def test_by_default_one_contradiction_rejects_without_a_confirmation_call(
+    small_chunks, monkeypatch
+) -> None:
+    stub = use(monkeypatch, Stub(NOT_COVERED, CONTRADICTED, repeat=SUPPORTED))
+    verdict = await check(LONG_SOURCE)
+    assert not verdict.passed
+    assert "excerpt 2" in verdict.reason
+    assert stub.confirm_prompts == []
+    assert stub.calls == 2
+
+
 @pytest.mark.asyncio
 async def test_a_long_source_is_chunked(small_chunks, monkeypatch) -> None:
     stub = use(monkeypatch, Stub(SUPPORTED, repeat=NOT_COVERED))
@@ -158,20 +213,104 @@ async def test_a_long_source_is_chunked(small_chunks, monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_one_contradiction_rejects_the_card(small_chunks, monkeypatch) -> None:
-    use(monkeypatch, Stub(NOT_COVERED, CONTRADICTED, repeat=SUPPORTED))
+async def test_a_confirmed_contradiction_rejects_the_card(small_chunks, confirm_on, monkeypatch) -> None:
+    use(monkeypatch, Stub(NOT_COVERED, CONTRADICTED, repeat=SUPPORTED, confirm=[CONFIRMED]))
     verdict = await check(LONG_SOURCE)
     assert not verdict.passed
     assert verdict.failed_claim == "constant-time performance"
     assert "excerpt 2" in verdict.reason
+    assert "confirmed" in verdict.reason
 
 
 @pytest.mark.asyncio
-async def test_a_contradiction_stops_further_calls(small_chunks, monkeypatch) -> None:
+async def test_a_confirmed_contradiction_stops_further_calls(small_chunks, confirm_on, monkeypatch) -> None:
     """Every remaining call costs the same and none can change the outcome."""
-    stub = use(monkeypatch, Stub(CONTRADICTED, repeat=SUPPORTED))
+    stub = use(monkeypatch, Stub(CONTRADICTED, repeat=SUPPORTED, confirm=[CONFIRMED]))
+    verdict = await check(LONG_SOURCE)
+    # The chunk call plus its confirmation, and nothing after.
+    assert stub.calls == 2
+    assert verdict.chunks_checked == 2
+
+
+@pytest.mark.asyncio
+async def test_an_unconfirmed_contradiction_does_not_reject(small_chunks, confirm_on, monkeypatch) -> None:
+    """The fix for the live false rejections. The chunk pass said "contradicted"
+    about a TRUE card - three times out of four on real data - and the narrower
+    confirmation disagreed. The card must survive, and carry on being checked."""
+    stub = use(monkeypatch, Stub(CONTRADICTED, SUPPORTED, repeat=NOT_COVERED, confirm=[OVERRULED]))
+    verdict = await check(LONG_SOURCE)
+
+    assert verdict.passed
+    assert "1 contradiction(s) overruled" in verdict.reason
+    # It did not stop at the overruled excerpt: the rest were still read.
+    assert stub.chunk_calls > 2
+
+
+@pytest.mark.asyncio
+async def test_an_overruled_contradiction_is_not_support(small_chunks, confirm_on, monkeypatch) -> None:
+    """Overruling a contradiction proves the excerpt did not REFUTE the card, not
+    that it confirmed it. With nothing else in favour, the card still has to
+    survive the single-pass check."""
+    stub = use(monkeypatch, Stub(CONTRADICTED, repeat=NOT_COVERED, confirm=[OVERRULED], whole=[FAIL]))
+    verdict = await check(LONG_SOURCE)
+    assert not verdict.passed
+    assert Stub.kind_of(stub.prompts[-1]) == "single-pass"
+
+
+@pytest.mark.asyncio
+async def test_a_confirmation_that_errors_does_not_reject(small_chunks, confirm_on, monkeypatch) -> None:
+    """Unconfirmed is not confirmed. Rejecting on a check that could not finish
+    is the expensive direction, because nothing retries a rejected card."""
+    use(monkeypatch, Stub(CONTRADICTED, SUPPORTED, repeat=NOT_COVERED,
+                          confirm=[LLMError("gateway timeout")]))
+    verdict = await check(LONG_SOURCE)
+    assert verdict.passed
+
+
+@pytest.mark.asyncio
+async def test_a_confirmation_error_with_no_support_raises(small_chunks, confirm_on, monkeypatch) -> None:
+    use(monkeypatch, Stub(CONTRADICTED, repeat=NOT_COVERED, confirm=[LLMError("gateway timeout")]))
+    with pytest.raises(LLMError, match="confirming excerpt 1"):
+        await check(LONG_SOURCE)
+
+
+@pytest.mark.asyncio
+async def test_only_a_real_boolean_confirms(small_chunks, confirm_on, monkeypatch) -> None:
+    """A string "true" is the checker failing to follow its output contract, and
+    a checker failing must never be what rejects a card."""
+    use(monkeypatch, Stub(CONTRADICTED, SUPPORTED, repeat=NOT_COVERED,
+                          confirm=[{"confirmed": "true", "reason": "x"}]))
+    verdict = await check(LONG_SOURCE)
+    assert verdict.passed
+
+
+@pytest.mark.asyncio
+async def test_confirmation_sees_the_disputed_claim_and_the_same_excerpt(
+    small_chunks, confirm_on, monkeypatch
+) -> None:
+    stub = use(monkeypatch, Stub(NOT_COVERED, CONTRADICTED, repeat=SUPPORTED, confirm=[CONFIRMED]))
     await check(LONG_SOURCE)
-    assert stub.calls == 1
+
+    [confirm_prompt] = stub.confirm_prompts
+    chunk_prompts = [p for p in stub.prompts if Stub.kind_of(p) == "chunk"]
+    second_excerpt = chunk_prompts[1].split("EXCERPT 2 OF")[1].split(":", 1)[1]
+    # The contradicting excerpt's text, not some other excerpt's.
+    assert second_excerpt.strip()[:40] in confirm_prompt
+    assert CONTRADICTED["failed_claim"] in confirm_prompt
+    # Claim before excerpt: the runtime truncates from the front (P33).
+    assert confirm_prompt.index(CONTRADICTED["failed_claim"]) < confirm_prompt.index(
+        "EXCERPT SAID TO CONTRADICT IT"
+    )
+
+
+@pytest.mark.asyncio
+async def test_with_no_named_claim_the_whole_card_is_disputed(small_chunks, confirm_on, monkeypatch) -> None:
+    unnamed = {**CONTRADICTED, "failed_claim": None}
+    stub = use(monkeypatch, Stub(unnamed, repeat=SUPPORTED, confirm=[CONFIRMED]))
+    await check(LONG_SOURCE)
+    [confirm_prompt] = stub.confirm_prompts
+    disputed = confirm_prompt.split("CLAIM UNDER DISPUTE:")[1].split("EXCERPT SAID")[0]
+    assert CARD in disputed
 
 
 @pytest.mark.asyncio
@@ -218,8 +357,9 @@ async def test_corroboration_outranks_a_chunk_that_errored(small_chunks, monkeyp
 
 
 @pytest.mark.asyncio
-async def test_a_contradiction_outranks_an_earlier_error(small_chunks, monkeypatch) -> None:
-    use(monkeypatch, Stub(LLMError("gateway timeout"), CONTRADICTED, repeat=SUPPORTED))
+async def test_a_confirmed_contradiction_outranks_an_earlier_error(small_chunks, confirm_on, monkeypatch) -> None:
+    use(monkeypatch, Stub(LLMError("gateway timeout"), CONTRADICTED, repeat=SUPPORTED,
+                          confirm=[CONFIRMED]))
     verdict = await check(LONG_SOURCE)
     assert not verdict.passed
 

@@ -21,6 +21,7 @@ things the prompt says NOT to fail for (incompleteness, simplification, style), 
 a rejection here is not evidence of over-strictness either.
 
     .venv/Scripts/python scripts/negative_control.py
+    .venv/Scripts/python scripts/negative_control.py --confirm   (measure the confirmation step)
 """
 
 from __future__ import annotations
@@ -126,13 +127,79 @@ LOSS_AVERSION: list[Case] = [
     ),
 ]
 
+# The cases below are NOT invented. They are real drafts from the first live run
+# through the P33-fixed gate, copied verbatim from rejected_draft.
+#
+# The negative control above only ever measured LENIENCY - does the gate catch a
+# planted lie. It never measured OVER-STRICTNESS, and live data showed that is the
+# failure that actually happens on the chunked path: three TRUE cards were
+# rejected because an excerpt discussed something the card did not claim - more
+# detail, or a different implementation. With no retry, each was a card lost for
+# good. These are the faithful controls that were missing.
+LINKED_LIST: list[Case] = [
+    (
+        "live-true-both-directions",
+        (
+            "Each node in a doubly-linked list holds a value and pointers to both the "
+            "next and previous nodes, allowing you to move forward or backward through "
+            "the list."
+        ),
+        True,
+    ),
+    # A real generator error the gate caught - but on a weak inference, not an
+    # actual contradiction. Kept as an expected FAILURE so a fix for over-strictness
+    # that turns this lucky catch into a miss is seen, not hidden. LISP's lists are
+    # SINGLY linked cons cells.
+    (
+        "live-false-lisp",
+        (
+            "Doubly-linked lists are used in programming languages like LISP and in "
+            "early AI systems because they make it easy to build and modify complex "
+            "data structures."
+        ),
+        False,
+    ),
+]
+
+PRIORITY_QUEUE: list[Case] = [
+    (
+        "live-true-heap-log-n",
+        (
+            "Inserting and removing elements from a priority queue using a heap takes "
+            "O(log n) time, making it efficient for large datasets. This is because the "
+            "heap maintains the priority order through a binary tree structure."
+        ),
+        True,
+    ),
+    (
+        "live-true-bst-alternative",
+        (
+            "Priority queues can be implemented with other structures like "
+            "self-balancing binary search trees, but they usually rely on heaps for "
+            "better performance. These trees allow for O(log n) time complexity for "
+            "insertion and deletion."
+        ),
+        True,
+    ),
+]
+
 SUBJECTS = [
     ("HashMap", "Java Collections", HASHMAP),
     ("Loss aversion", "Behavioural Economics", LOSS_AVERSION),
+    ("LinkedList", "Java Data Structures", LINKED_LIST),
+    ("PriorityQueue", "Java Data Structures", PRIORITY_QUEUE),
 ]
 
 
 async def main() -> int:
+    if "--confirm" in sys.argv:
+        # Measures the confirmation step, which is off in production
+        # (FACT_CHECK_CONFIRM). Set on the agent module: config is bound at import.
+        from app.agents import fact_check
+
+        fact_check.FACT_CHECK_CONFIRM = True
+        print("confirmation step: ON (measurement only)")
+
     try:
         client = build_client()
     except ContactNotConfigured as exc:

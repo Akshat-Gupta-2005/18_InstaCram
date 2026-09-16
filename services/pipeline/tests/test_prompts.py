@@ -16,6 +16,7 @@ AGENT_PROMPTS = [
     "card-generation.md",
     "fact-check.md",
     "fact-check-chunk.md",
+    "fact-check-confirm.md",
     "candidate-topics.md",
 ]
 
@@ -51,6 +52,28 @@ def test_chunk_prompt_exposes_its_placeholders() -> None:
     prompt = load_prompt("fact-check-chunk.md")
     for var in ("{{card_content}}", "{{excerpt}}", "{{part}}", "{{total}}"):
         assert var in prompt
+
+
+def test_confirm_prompt_exposes_its_placeholders() -> None:
+    prompt = load_prompt("fact-check-confirm.md")
+    for var in ("{{card_content}}", "{{claim}}", "{{excerpt}}"):
+        assert var in prompt
+
+
+def test_confirm_prompt_names_the_failure_shapes_seen_live() -> None:
+    """The confirmation call exists because of two specific false-rejection
+    shapes from live data. If either instruction is deleted, the call reverts to
+    re-asking the question the chunk pass already got wrong."""
+    prompt = " ".join(load_prompt("fact-check-confirm.md").lower().split())
+    assert "different implementation" in prompt
+    assert "adds information" in prompt
+    assert "when unsure, answer false" in prompt
+
+
+def test_confirm_prompt_puts_the_claim_before_the_excerpt() -> None:
+    # The runtime drops the FRONT of an over-long prompt (P33).
+    prompt = load_prompt("fact-check-confirm.md")
+    assert prompt.index("{{claim}}") < prompt.index("{{excerpt}}")
 
 
 def test_chunk_prompt_says_absence_is_not_contradiction() -> None:
@@ -93,6 +116,7 @@ OUTPUT_KEYS = {
         "supported",
         "not_covered",
     ],
+    "fact-check-confirm.md": ["confirmed", "reason"],
 }
 
 
