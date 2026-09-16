@@ -1,0 +1,120 @@
+{
+  "generated_at": "2026-09-16T09:50:34.178410+00:00",
+  "dry_run": false,
+  "scrolls_checked": 12,
+  "passed": 12,
+  "failed": 0,
+  "checker_errors": 0,
+  "ungroundable": 0,
+  "retired": 0,
+  "results": [
+    {
+      "scroll": "0038068b-ab7c-404f-8031-9006259fb0ae",
+      "topic": "ArrayList",
+      "outcome": "pass",
+      "fact_check_calls": 1,
+      "grounding_chars": 3535,
+      "reason": "The card accurately summarizes the key points about ArrayList from the source material, including its type parameters, interfaces, subclasses, performance characteristics, capacity management, thread safety, and fail-fast iterators. No factual claims contradict the source material or independent kno",
+      "failed_claim": null
+    },
+    {
+      "scroll": "8c8b2b86-4692-40e0-a7ad-763bd203539c",
+      "topic": "ArrayList",
+      "outcome": "pass",
+      "fact_check_calls": 1,
+      "grounding_chars": 3535,
+      "reason": "The card accurately summarizes the key facts about ArrayList from the source material, including its type parameters, interfaces, subclasses, performance characteristics, and thread safety considerations. No factual claims contradict the source material or independent knowledge.",
+      "failed_claim": null
+    },
+    {
+      "scroll": "d726f750-2ef1-45c0-be70-1cd0bbdb19c1",
+      "topic": "ArrayList",
+      "outcome": "pass",
+      "fact_check_calls": 1,
+      "grounding_chars": 3535,
+      "reason": "The card accurately restates key facts about ArrayList from the source material without introducing any incorrect claims or specific figures. It correctly mentions the type parameter, implemented interfaces, subclasses, time complexity of operations, capacity, synchronization, and fail-fast iterator",
+      "failed_claim": null
+    },
+    {
+      "scroll": "506c4249-e70f-4855-8cf1-bdb9071dd47b",
+      "topic": "HashMap",
+      "outcome": "pass",
+      "fact_check_calls": 1,
+      "grounding_chars": 4768,
+      "reason": "The card accurately summarizes the key facts about HashMap from the source material, including its type parameters, interfaces, subclasses, behavior, performance characteristics, and thread safety considerations. No factual claims contradict the source material or appear unsupported.",
+      "failed_claim": null
+    },
+    {
+      "scroll": "774985e0-b582-416c-9814-223284312b4e",
+      "topic": "HashMap",
+      "outcome": "pass",
+      "fact_check_calls": 1,
+      "grounding_chars": 4768,
+      "reason": "The card accurately summarizes key aspects of the HashMap class from the source material, including its type parameters, interfaces, subclasses, performance characteristics, load factor, and concurrency considerations. No factual claims contradict the source material or appear unsupported.",
+      "failed_claim": null
+    },
+    {
+      "scroll": "f7aa8a4e-3d5a-4982-b645-3fb68c1dd0e1",
+      "topic": "HashMap",
+      "outcome": "pass",
+      "fact_check_calls": 1,
+      "grounding_chars": 4768,
+      "reason": "The card accurately restates key facts from the source material without introducing any factual errors or unsupported claims. It correctly describes HashMap's parameters, interfaces, subclasses, performance characteristics, and concurrency behavior.",
+      "failed_claim": null
+    },
+    {
+      "scroll": "6121ab80-d7a1-4bab-a9a5-507210aa08dd",
+      "topic": "Optional",
+      "outcome": "pass",
+      "fact_check_calls": 1,
+      "grounding_chars": 1065,
+      "reason": "The card is a placeholder and does not contain any factual claims that need verification. It does not contradict the source material, nor does it make any specific factual assertions that require independent knowledge.",
+      "failed_claim": null
+    },
+    {
+      "scroll": "e23514c5-1173-436e-a90a-7258d6193c42",
+      "topic": "Optional",
+      "outcome": "pass",
+      "fact_check_calls": 1,
+      "grounding_chars": 1065,
+      "reason": "The card is a placeholder and does not contain any factual claims that need verification. It does not contradict the source material, nor does it make any assertions that are not either restated or omitted.",
+      "failed_claim": null
+    },
+    {
+      "scroll": "7c876b04-5ab8-4aca-85ad-c41d995cc503",
+      "topic": "TreeSet",
+      "outcome": "pass",
+      "fact_check_calls": 1,
+      "grounding_chars": 3175,
+      "reason": "The card accurately reflects the source material regarding TreeSet, including its implementation based on TreeMap, log(n) time complexity for basic operations, consistency with equals, unsynchronized nature, fail-fast iterators, and unsupported addFirst/addLast methods. No factual claims contradict ",
+      "failed_claim": null
+    },
+    {
+      "scroll": "f21d8c7a-db87-4920-a3c0-88810bd67e16",
+      "topic": "TreeSet",
+      "outcome": "pass",
+      "fact_check_calls": 1,
+      "grounding_chars": 3175,
+      "reason": "The card accurately reflects the source material, including the implementation of TreeSet based on TreeMap, its log(n) time complexity for basic operations, the lack of synchronization, and the fail-fast iterators. No factual claims contradict the source material or are unsupported.",
+      "failed_claim": null
+    },
+    {
+      "scroll": "daca5544-3f21-485e-8876-8225cac35b61",
+      "topic": "Anchoring",
+      "outcome": "pass",
+      "fact_check_calls": 13,
+      "grounding_chars": 36724,
+      "reason": "no contradiction found across 13 excerpts of the source; 1 corroborated it - The excerpt confirms the card's specific claims about the anchoring effect, including its description as a psychological phenomenon, its origin in psychophysics, its formalization by Tversky and Kahneman, and the concept of",
+      "failed_claim": null
+    },
+    {
+      "scroll": "e2b64fe8-ed9f-41fd-b343-dcf0e3454488",
+      "topic": "Anchoring",
+      "outcome": "pass",
+      "fact_check_calls": 13,
+      "grounding_chars": 36724,
+      "reason": "no contradiction found across 13 excerpts of the source; 1 corroborated it - The excerpt confirms the card's specific claims about the anchoring effect, including its description as a psychological phenomenon, its origin in psychophysics and formalization by Tversky and Kahneman, and examples of num",
+      "failed_claim": null
+    }
+  ]
+}

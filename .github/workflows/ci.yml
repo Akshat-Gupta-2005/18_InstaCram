@@ -7,6 +7,22 @@ on:
 jobs:
   serving:
     runs-on: ubuntu-latest
+    # The serving tests are integration tests against a REAL Postgres - the rules
+    # under test (paging by view exclusion, retired cards never surfacing,
+    # erasure) live in SQL and triggers, so a mock would test nothing. This job
+    # had no database, so `npm test` failed on every push since the first commit
+    # while passing locally, where Docker's Postgres happened to be running. The
+    # suite's global setup creates `instacram_test` itself, as this superuser.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: instacram
+          POSTGRES_PASSWORD: instacram
+          POSTGRES_DB: instacram
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 3s --health-retries 10
     defaults:
       run:
         working-directory: services/serving

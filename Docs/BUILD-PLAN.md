@@ -92,7 +92,9 @@ flowchart TD
 
 **Card Generation LLM** (Pipeline) — joins both inputs into multiple one-page draft cards. Depends on both of the above completing.
 
-**Fact-Check Agent** (Pipeline) — the sole quality gate. Verifies each draft against the gathered source material. Fail → deleted. Pass → persisted and streamed at once.
+**Fact-Check Agent** (Pipeline) — the sole quality gate. Verifies each draft against the gathered source material. Fail → quarantined (not deleted; §4.3). Pass → persisted and streamed at once.
+
+**A source larger than one context window is chunked, not truncated.** This is not an optimisation but a correctness requirement, learned the hard way (P33): the runtime silently drops the *front* of an over-long prompt, which is where the card sits, and then answers confidently about material it was never shown. Chunked checking uses a **different prompt** from single-pass, with a three-way per-fragment verdict where **only contradiction is decisive** — a claim's absence from one fragment is not evidence against it, and treating it as evidence would reject nearly every card, permanently, since v1 has no retry. Because a gate is the one component whose failure mode is looking perfect, its accuracy is asserted by a **negative control** that plants known-false claims and requires them to be caught, alongside faithful controls that must still pass.
 
 **Data stores** — Postgres (system of record), two Qdrant collections, and client-side local storage. The two vector collections are independent of each other: one is written at topic creation and read at lookup, the other is written at scroll creation and read by future search. Neither needs the other to function.
 
