@@ -49,4 +49,26 @@ export const config = {
    * disambiguation stage are the two things to revisit.
    */
   topicMatchThreshold: Number(process.env.TOPIC_MATCH_THRESHOLD ?? 0.955),
+
+  /**
+   * The field-expansion worker (W5). On by default in the server; off by setting
+   * EXPANSION_WORKER=off, e.g. to run several API replicas with one worker. Tests
+   * never start it - they drive `expandOnce` directly with injected dependencies.
+   */
+  expansionWorker: (process.env.EXPANSION_WORKER ?? "on") !== "off",
+  expansionPollMs: Number(process.env.EXPANSION_POLL_MS ?? 2000),
+  /**
+   * Five attempts from 5s covers 5+10+20+40+80 = ~2.5 minutes - long enough to
+   * ride out Ollama being restarted, which is the usual cause and has happened
+   * repeatedly in development. After that the expansion fails, and the user's
+   * "more topics" tap is the recovery.
+   */
+  expansionMaxAttempts: Number(process.env.EXPANSION_MAX_ATTEMPTS ?? 5),
+  expansionBaseBackoffMs: Number(process.env.EXPANSION_BASE_BACKOFF_MS ?? 5000),
+  /**
+   * A running expansion older than this is presumed to have lost its worker.
+   * Measured candidate generation is 32-54s and ~20 resolves take seconds, so ten
+   * minutes is far past any real run while still recovering a dead one promptly.
+   */
+  expansionStaleMs: Number(process.env.EXPANSION_STALE_MS ?? 600_000),
 } as const;

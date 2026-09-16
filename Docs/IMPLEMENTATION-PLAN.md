@@ -253,7 +253,21 @@ Phase P4. Proves the central claim of the architecture.
 
 **5.5 is the acceptance test for the entire design.** Everything upstream exists to make that assertion pass. Write it as a test rather than a demo, because it is also the regression guard for every later change to the lookup.
 
-Measure and record: cache hit rate on candidate topics, time-to-first-card on a hit versus a miss.
+Measure and record: cache hit rate on candidate topics, time-to-first-card on a hit versus a miss. **Take the hit rate on generator-created topics only** — topics written by `seed.ts` or the pipeline scripts have hand-authored descriptions the generator's candidates mostly cannot match, so a hit rate read off a database containing them measures the database, not the cache (P36).
+
+**W5 progress (2026-09-16):**
+
+| # | State | Evidence |
+|---|---|---|
+| 3.4 | **Done** | `npm run vectors:verify` against the real index: 14/14 topics retrieve themselves at 1.0000; an unrelated query peaks at 0.7923; 0 orphans |
+| 5.1 | **Done** | A first request enqueues an expansion and returns in **224ms**; the worker generates and resolves candidates. Live: `Java Data Structures`, 20 candidates → 1 reused / 19 created, 0 errors, 54.4s |
+| 5.2 | **Done** | The plan's own test, verbatim: 20 polls of a field holding an empty topic, zero requeues. **Seen failing** when a poll was made to requeue empty topics |
+| 5.3 | Partly | Reuse links the existing topic and its cards serve under the new field. No test yet drives it from a feed request end to end — that is 5.5 |
+| 5.4 | **Half** | Serving creates the pending topic and its outbox row. **The pipeline worker that claims pending topics does not exist yet**, so a created topic stays pending |
+| 5.5 | Not started | Needs 5.4's worker |
+| 5.6, 5.7 | Not started | The job table already has `kind = 'more'` for 5.6 |
+
+Decisions taken to get here, each recorded in DECISIONS.md on 2026-09-16: Postgres as the queue for both the pipeline and candidate generation; an advisory lock on the candidate name **plus** a Postgres read for topics whose vector is still owed (the lock alone was shown to prevent nothing, P35); deterministic tie-breaking between duplicate topics, without which 5.5 could fail while every lookup looked correct.
 
 ---
 
@@ -288,7 +302,7 @@ W0, W1, W2, W2b, W3, the scraper spike, and **all of W4 (8a, 8b, 8c, 8d)** are d
 
 Next:
 
-1. **W5 — cache-then-generate wiring (5.1–5.7).** The remaining core of the product. Today an unknown field reports `exhausted`, because nothing generates. W5 makes it queue work and report `generating` instead, and adds `POST /v1/fields/{id}/expand` — the endpoint the end-of-field card's "more topics" action calls. **5.5 is the acceptance test for the whole design.** Start with **task 3.4** (the Qdrant topic-vector write + search path), carried from W3: the cache *lookup* is what "cache-then-generate" branches on, and every other task in W5 assumes it exists.
+1. **W5 — cache-then-generate wiring, in progress.** 3.4, 5.1 and 5.2 are done; an unknown field now queues work and reports `generating` (see the progress table in §9). **Next: the pipeline worker that claims pending topics** — the other half of 5.4, and the only thing standing between a created topic and its cards. Then **5.5, the acceptance test for the whole design**, then 5.6's `POST /v1/fields/{id}/expand`.
 2. **Re-measure the rejection rate** once a batch has run through the fixed gate. The 8d figure is `0/9` on the drafts that were genuinely checked — too small to settle P10, and the earlier `0.000 over 20` is withdrawn. Run `scripts/negative_control.py` first, every time, before quoting a rate: it is the only thing that distinguishes a gate that passes everything from a gate that has nothing to reject.
 3. **W6 (client)** stays blocked on the framework choice, and nothing before it depends on one.
 

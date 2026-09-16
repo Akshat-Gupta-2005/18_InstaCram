@@ -1,4 +1,5 @@
 import { config } from "../config.js";
+import { enqueueInitialExpansion, openExpansionExists } from "../expansion/queue.js";
 import { adjacentFields, findOrCreateField, type Field } from "../repo/fields.js";
 import {
   failedTopics,
@@ -25,13 +26,24 @@ export async function buildFeedPage(
   limit: number,
 ): Promise<FeedPage> {
   const field = await findOrCreateField(fieldName);
-  const [scrolls, pending, failed] = await Promise.all([
+
+  // Enqueue, never run. Candidate generation takes 32-54s, so this request only
+  // records that the field is owed an expansion and returns at once. A no-op for
+  // any field that already has topics, and for any later poll (see the function),
+  // which is what stops polling from re-running candidate generation (P16).
+  await enqueueInitialExpansion(field.id);
+
+  const [scrolls, pending, failed, expanding] = await Promise.all([
     unviewedPage(field.id, accountId, limit),
     pendingTopicCount(field.id),
     failedTopics(field.id),
+    openExpansionExists(field.id),
   ]);
 
-  const generating = pending > 0;
+  // An expansion still owed counts as generating. Without it, a brand-new field
+  // has no topics while its candidates are produced, reports `exhausted`, and
+  // shows the end-of-field card for most of a minute.
+  const generating = pending > 0 || expanding;
   // Exhausted only when there is nothing to show AND nothing on the way. A field
   // still generating is not finished, it is early.
   const exhausted = scrolls.length === 0 && !generating;

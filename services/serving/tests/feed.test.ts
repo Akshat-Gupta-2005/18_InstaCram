@@ -151,13 +151,79 @@ describe("a field that is still generating", () => {
     expect(page.body.failed_topics.map((t) => t.name)).toEqual(["Lazy Evaluation"]);
   });
 
-  it("treats a brand-new field with no topics as exhausted, not generating", async () => {
-    // Until W5 wires generation in, nothing is queued for an unknown field.
+  it("queues an expansion for a brand-new field and reports it as generating", async () => {
+    // W5 flipped this. Before generation was wired in, an unknown field had no
+    // topics and nothing queued, so it reported `exhausted` - and it still would
+    // today if an owed expansion did not count toward `generating`: the field has
+    // no topics for the 32-54s its candidates take, and would show the end card.
     const api = client(base, "alice");
+    const page = await api.feed("Marine Biology");
+
+    expect(page.body.scrolls).toHaveLength(0);
+    expect(page.body.generating).toBe(true);
+    expect(page.body.exhausted).toBe(false);
+    expect(page.body.end_card).toBeNull();
+    expect(page.body.retry_after_ms).toBeGreaterThan(0);
+    expect(
+      await countRows(
+        `SELECT count(*) AS n FROM field_expansion fe JOIN field f ON f.id = fe.field_id
+         WHERE f.name_norm = 'marine biology' AND fe.kind = 'initial' AND fe.status = 'pending'`,
+      ),
+    ).toBe(1);
+  });
+
+  it("queues that expansion once, however often the client polls", async () => {
+    // P16 one level up. Candidate generation costs 32-54s of LLM time; a client
+    // polling every 3s must not buy another run with every request.
+    const api = client(base, "alice");
+    for (let i = 0; i < 20; i++) await api.feed("Marine Biology");
+    expect(await countRows(`SELECT count(*) AS n FROM field_expansion`)).toBe(1);
+  });
+
+  it("never expands a field that already has topics", async () => {
+    const api = client(base, "alice");
+    await api.feed("Java Utils");
+    await api.feed("Java Streams");
+    expect(await countRows(`SELECT count(*) AS n FROM field_expansion`)).toBe(0);
+  });
+
+  it("reports exhausted once an expansion has finished with nothing to show", async () => {
+    // The other side of counting an owed expansion as generating: once it is no
+    // longer owed, a field with no cards IS finished, and must say so.
+    const api = client(base, "alice");
+    await api.feed("Marine Biology");
+    await pool.query(`UPDATE field_expansion SET status = 'done', finished_at = now()`);
+
     const page = await api.feed("Marine Biology");
     expect(page.body.generating).toBe(false);
     expect(page.body.exhausted).toBe(true);
     expect(page.body.end_card?.viewed_count).toBe(0);
+  });
+});
+
+describe("task 5.2: an empty topic is never retried by polling", () => {
+  it("polls a field holding an empty topic 20 times and runs the pipeline for it zero times", async () => {
+    // With Postgres as the queue, "a pipeline run" for a topic means the topic
+    // going back to 'pending' - that is the only way the pipeline worker would
+    // ever pick it up. So the assertion is on the topic row, before and after.
+    const api = client(base, "alice");
+    const before = await pool.query(
+      `SELECT status, claimed_at FROM topic WHERE id = $1`,
+      [ids.topics.lazyEval],
+    );
+    expect(before.rows[0]).toMatchObject({ status: "empty" });
+
+    for (let i = 0; i < 20; i++) {
+      const page = await api.feed("Java Streams");
+      expect(page.body.failed_topics.map((t) => t.name)).toContain("Lazy Evaluation");
+    }
+
+    const after = await pool.query(`SELECT status, claimed_at FROM topic WHERE id = $1`, [ids.topics.lazyEval]);
+    expect(after.rows[0]).toEqual(before.rows[0]);
+    expect(await countRows(`SELECT count(*) AS n FROM field_expansion`)).toBe(0);
+    expect(
+      await countRows(`SELECT count(*) AS n FROM topic_generation_stats WHERE topic_id = $1`, [ids.topics.lazyEval]),
+    ).toBe(0);
   });
 });
 

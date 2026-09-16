@@ -1,27 +1,16 @@
 /**
  * The branch cache-then-generate is named for, against REAL Postgres.
  *
- * Qdrant and the embedding server are replaced by a small in-memory index,
- * because CI has neither (P34) - and because the rules that matter here live in
- * SQL: the advisory lock, the same-name read, the outbox row, the requeue. The
- * real search adapter is verified against the real index separately
- * (src/vectors/verifyTopicIndex.ts).
- *
- * The fake embedding is deliberately faithful in the one way that matters:
- * identical text gives an identical vector (similarity 1.0), and different text
- * gives a near-orthogonal one (similarity ~0). That is exactly how exact
- * duplicates and distinct topics behave on the real model.
+ * Qdrant and the embedding server are replaced by a small in-memory index
+ * (tests/fakes.ts), because CI has neither (P34) - and because the rules that
+ * matter here live in SQL: the advisory lock, the same-name read, the outbox row,
+ * the requeue.
  */
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { pool } from "../src/db/pool.js";
-import { chooseMatch, resolveCandidate, type ResolveDeps } from "../src/topics/resolve.js";
-import { topicEmbeddingText } from "../src/topics/embeddingText.js";
-import { cosine } from "../src/embeddings/client.js";
-import type { TopicHit } from "../src/vectors/topicIndex.js";
+import { chooseMatch, resolveCandidate } from "../src/topics/resolve.js";
+import { fakeResolveDeps as fakeDeps, indexTopic, insertTopic } from "./fakes.js";
 import { countRows, reseed } from "./helpers.js";
-
-const THRESHOLD = 0.955;
-const DIM = 64;
 
 let ids: Awaited<ReturnType<typeof reseed>>;
 
@@ -32,62 +21,6 @@ beforeEach(async () => {
 afterAll(async () => {
   await pool.end();
 });
-
-/** A deterministic unit vector per string. Same text -> same vector. */
-function fakeVector(text: string): number[] {
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i++) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  const v: number[] = [];
-  for (let i = 0; i < DIM; i++) {
-    h ^= h << 13;
-    h ^= h >>> 17;
-    h ^= h << 5;
-    v.push(((h >>> 0) / 4294967296) * 2 - 1);
-  }
-  const norm = Math.sqrt(v.reduce((s, x) => s + x * x, 0));
-  return v.map((x) => x / norm);
-}
-
-/**
- * Stands in for Qdrant. `index` holds only the vectors the outbox has "written",
- * so a test controls exactly what the search can see - which is how outbox lag
- * is simulated.
- */
-function fakeDeps(index = new Map<string, number[]>(), searchDelayMs = 0) {
-  const calls = { embed: 0, search: 0 };
-  const deps: ResolveDeps = {
-    threshold: THRESHOLD,
-    embed: async (texts) => {
-      calls.embed++;
-      return texts.map(fakeVector);
-    },
-    search: async (vector, limit): Promise<TopicHit[]> => {
-      calls.search++;
-      if (searchDelayMs) await new Promise((r) => setTimeout(r, searchDelayMs));
-      return [...index.entries()]
-        .map(([topicId, v]) => ({ topicId, score: cosine(vector, v) }))
-        .sort((a, b) => b.score - a.score)
-        .slice(0, limit);
-    },
-  };
-  return { deps, index, calls };
-}
-
-async function insertTopic(name: string, description: string, status: string): Promise<string> {
-  const { rows } = await pool.query<{ id: string }>(
-    `INSERT INTO topic (name, description, status) VALUES ($1, $2, $3) RETURNING id`,
-    [name, description, status],
-  );
-  return rows[0]!.id;
-}
-
-/** Puts a topic's vector "in Qdrant", as the outbox worker would. */
-function indexTopic(index: Map<string, number[]>, id: string, name: string, description: string) {
-  index.set(id, fakeVector(topicEmbeddingText(name, description)));
-}
 
 const TREEMAP = { name: "TreeMap", description: "A sorted map backed by a red-black tree." };
 
