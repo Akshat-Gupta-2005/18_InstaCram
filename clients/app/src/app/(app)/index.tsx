@@ -3,21 +3,28 @@ import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { useSession } from "@/auth/session";
-import { MaxContentWidth, Spacing } from "@/constants/theme";
+import { Fonts, MaxContentWidth, Spacing } from "@/constants/theme";
+import { Type } from "@/constants/type";
 import { useColors } from "@/constants/use-colors";
+import { useIsWide } from "@/hooks/use-is-wide";
+import { Label, PrimaryButton } from "@/ui/primitives";
+import { useShellInfo } from "@/ui/shell";
 
 /**
  * Starting points. Not a catalogue: any field can be typed, and a new one is
- * generated on first request. These are fields worth trying first because some
- * already have cards, so they open instantly rather than as a cold start.
+ * generated on first request. These are worth trying first because they already
+ * have cards, so they open at once rather than as a cold start.
  */
-const STARTERS = ["Java Data Structures", "Java Collections", "Behavioural Economics"];
+const STARTERS = ["Java Data Structures", "Science", "Java Streams"];
 
 export default function HomeScreen() {
-  const colors = useColors();
+  const c = useColors();
   const router = useRouter();
+  const wide = useIsWide();
   const { signOut } = useSession();
   const [field, setField] = useState("");
+
+  useShellInfo({ crumbs: ["Fields"] });
 
   function open(name: string) {
     const trimmed = name.trim();
@@ -27,52 +34,59 @@ export default function HomeScreen() {
 
   return (
     <ScrollView
-      style={{ backgroundColor: colors.background }}
-      contentContainerStyle={styles.container}
+      style={{ backgroundColor: c.background }}
+      contentContainerStyle={[styles.container, wide && styles.containerWide]}
       keyboardShouldPersistTaps="handled">
       <View style={styles.column}>
-        <Text style={[styles.heading, { color: colors.text }]}>What do you want to learn?</Text>
-        <Text style={[styles.sub, { color: colors.textSecondary }]}>
-          Type a field. Cards you haven't seen come first; a brand-new field takes a minute or two to generate.
+        <Label tone="accent" strong>Begin a field</Label>
+        <Text style={[styles.heading, { color: c.text }]}>What do you want to learn?</Text>
+        <Text style={[Type.bodySmall, { color: c.textSecondary }]}>
+          Type a field. Cards you haven't seen come first. A brand-new field is written for you, a topic at a time - its
+          first cards can take several minutes.
         </Text>
 
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.backgroundElement, color: colors.text }]}
-          placeholder="e.g. Java Concurrency"
-          placeholderTextColor={colors.textSecondary}
-          value={field}
-          onChangeText={setField}
-          onSubmitEditing={() => open(field)}
-          returnKeyType="go"
-          maxLength={100}
-        />
-        <Pressable
-          onPress={() => open(field)}
-          disabled={!field.trim()}
-          style={[styles.primary, { backgroundColor: colors.accent, opacity: field.trim() ? 1 : 0.5 }]}>
-          <Text style={[styles.primaryText, { color: colors.onAccent }]}>Start</Text>
-        </Pressable>
+        <View style={[styles.search, { backgroundColor: c.surface, borderColor: c.border }]}>
+          <TextInput
+            style={[styles.input, { color: c.text }]}
+            placeholder="e.g. Java Concurrency"
+            placeholderTextColor={c.textFaint}
+            value={field}
+            onChangeText={setField}
+            onSubmitEditing={() => open(field)}
+            returnKeyType="go"
+            maxLength={100}
+          />
+          <PrimaryButton label="Start" onPress={() => open(field)} disabled={!field.trim()} style={styles.start} />
+        </View>
 
-        <Text style={[styles.section, { color: colors.textSecondary }]}>Try one of these</Text>
-        <View style={styles.chips}>
-          {STARTERS.map((name) => (
+        <Label tone="muted" style={styles.section}>Fields with cards</Label>
+        <View style={styles.list}>
+          {STARTERS.map((name, i) => (
             <Pressable
               key={name}
               onPress={() => open(name)}
-              style={[styles.chip, { backgroundColor: colors.backgroundElement }]}>
-              <Text style={{ color: colors.text }}>{name}</Text>
+              style={({ pressed }) => [
+                styles.row,
+                { borderBottomColor: c.border, opacity: pressed ? 0.7 : 1 },
+                i === 0 && { borderTopColor: c.border, borderTopWidth: 1 },
+              ]}>
+              <Text style={[Type.mono, { color: c.textFaint }]}>{String(i + 1).padStart(2, "0")}</Text>
+              <Text style={[Type.body, { color: c.text, flex: 1, fontSize: 21 }]}>{name}</Text>
+              <Text style={{ color: c.accent, fontSize: 16 }}>→</Text>
             </Pressable>
           ))}
         </View>
 
-        <View style={styles.footer}>
-          <Pressable onPress={() => router.push("/saved")} style={styles.link}>
-            <Text style={{ color: colors.accent, fontWeight: "600" }}>Saved cards</Text>
-          </Pressable>
-          <Pressable onPress={() => void signOut()} style={styles.link}>
-            <Text style={{ color: colors.textSecondary }}>Sign out</Text>
-          </Pressable>
-        </View>
+        {!wide && (
+          <View style={styles.footer}>
+            <Pressable onPress={() => router.push("/saved")}>
+              <Label tone="accent" strong>Saved cards</Label>
+            </Pressable>
+            <Pressable onPress={() => void signOut()}>
+              <Label tone="muted">Sign out</Label>
+            </Pressable>
+          </View>
+        )}
       </View>
     </ScrollView>
   );
@@ -80,15 +94,14 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, alignItems: "center", padding: Spacing.four },
-  column: { width: "100%", maxWidth: Math.min(MaxContentWidth, 560), gap: Spacing.three },
-  heading: { fontSize: 28, fontWeight: "700", marginTop: Spacing.four },
-  sub: { fontSize: 15, lineHeight: 21 },
-  input: { borderRadius: 12, paddingHorizontal: Spacing.three, paddingVertical: 14, fontSize: 16 },
-  primary: { borderRadius: 12, paddingVertical: 14, alignItems: "center" },
-  primaryText: { fontSize: 16, fontWeight: "600" },
-  section: { fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5, marginTop: Spacing.four },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.two },
-  chip: { borderRadius: 999, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
+  containerWide: { paddingTop: 72 },
+  column: { width: "100%", maxWidth: MaxContentWidth, gap: Spacing.three },
+  heading: { fontFamily: Fonts.serifMedium, fontSize: 42, lineHeight: 50, letterSpacing: -0.4 },
+  search: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: 6, padding: 6, marginTop: Spacing.three, gap: 8 },
+  input: { flex: 1, fontFamily: Fonts.serif, fontSize: 19, paddingHorizontal: 12, paddingVertical: 10 },
+  start: { paddingVertical: 12 },
+  section: { marginTop: Spacing.five },
+  list: {},
+  row: { flexDirection: "row", alignItems: "center", gap: Spacing.three, paddingVertical: 18, borderBottomWidth: 1 },
   footer: { flexDirection: "row", justifyContent: "space-between", marginTop: Spacing.five },
-  link: { paddingVertical: Spacing.two },
 });

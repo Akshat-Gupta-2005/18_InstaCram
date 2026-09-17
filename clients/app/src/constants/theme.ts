@@ -1,67 +1,75 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * The reading-room design system: a warm parchment page, serif reading type,
+ * small-caps sans labels, and a deep red accent (reference: the 2026-09-17 mock).
+ *
+ * Two palettes. "parchment" is the default and the one the reference shows;
+ * "ink" is its dark counterpart for reading at night. Both keep the same roles,
+ * so a component never picks a raw colour.
  */
-
 import '@/global.css';
 
-import { Platform } from 'react-native';
-
-export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
-    accent: '#208AEF',
-    onAccent: '#ffffff',
-    // Trust labels must be told apart at a glance: a verified card and an
-    // AI-generated one make different promises to the reader.
-    verified: '#1F8A4C',
-    generated: '#B26A00',
-    danger: '#C62828',
+export const Palettes = {
+  parchment: {
+    background: '#F8F3EB', // the page
+    rail: '#F2ECE2', // sidebar and top bar
+    surface: '#FFFDF9', // the card itself
+    backgroundElement: '#F3ECE2', // boxes inside a card
+    backgroundSelected: '#EAE1D4',
+    border: '#E6DCCD',
+    text: '#1E1915',
+    textSecondary: '#6F665C',
+    textFaint: '#A59B8F',
+    accent: '#7A2412', // deep red: brand, emphasis, progress
+    accentSoft: '#F4E1D8',
+    onAccent: '#FFFFFF',
+    slate: '#34506B', // breadcrumbs, subtitles, links
+    verified: '#2F6B45',
+    verifiedSoft: '#E5EFE4',
+    generated: '#8A5A12',
+    generatedSoft: '#F4E8D2',
+    danger: '#B3261E',
+    codeBackground: '#F4E6DF',
+    codeText: '#7A2412',
   },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
-    accent: '#4DA3F5',
-    onAccent: '#000000',
-    verified: '#4CC47F',
-    generated: '#F0A43A',
-    danger: '#EF6B6B',
+  ink: {
+    background: '#15120F',
+    rail: '#1B1814',
+    surface: '#221E19',
+    backgroundElement: '#2A251F',
+    backgroundSelected: '#342D25',
+    border: '#3A332A',
+    text: '#EDE5D8',
+    textSecondary: '#B5AA9B',
+    textFaint: '#7D7367',
+    accent: '#E0957A',
+    accentSoft: '#3A2620',
+    onAccent: '#15120F',
+    slate: '#9DB6CF',
+    verified: '#7FC495',
+    verifiedSoft: '#22332A',
+    generated: '#E2B35F',
+    generatedSoft: '#3A2F1C',
+    danger: '#EF8A80',
+    codeBackground: '#3A2620',
+    codeText: '#F0B7A2',
   },
 } as const;
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+export type ThemeMode = keyof typeof Palettes;
+export type Palette = { [K in keyof (typeof Palettes)['parchment']]: string };
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
+/** Font family names are the @expo-google-fonts export names, identical on web and native. */
+export const Fonts = {
+  serif: 'Newsreader_400Regular',
+  serifItalic: 'Newsreader_400Regular_Italic',
+  serifMedium: 'Newsreader_500Medium',
+  serifSemiBold: 'Newsreader_600SemiBold',
+  sans: 'Inter_400Regular',
+  sansMedium: 'Inter_500Medium',
+  sansSemiBold: 'Inter_600SemiBold',
+  mono: 'JetBrainsMono_400Regular',
+  monoMedium: 'JetBrainsMono_500Medium',
+} as const;
 
 export const Spacing = {
   half: 2,
@@ -73,5 +81,14 @@ export const Spacing = {
   six: 64,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+/** The reading column. Long lines tire the eye; the reference keeps cards narrow. */
+export const MaxContentWidth = 700;
+
+/** At or above this width the app uses the desktop reader layout (sidebar, peeks, keyboard). */
+export const WideBreakpoint = 1000;
+
+/**
+ * At or above this width the keyboard panel also fits beside the card: sidebar
+ * 268 + side padding 64 + card column 700 + gap 24 + panel 240 = 1296.
+ */
+export const CodexBreakpoint = 1320;

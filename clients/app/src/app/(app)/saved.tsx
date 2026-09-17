@@ -7,14 +7,19 @@ import { ApiError } from "@/api/client";
 import type { ScrollCard } from "@/api/types";
 import { useSession } from "@/auth/session";
 import { MaxContentWidth, Spacing } from "@/constants/theme";
+import { Type } from "@/constants/type";
 import { useColors } from "@/constants/use-colors";
+import { Label, TrustBadge } from "@/ui/primitives";
+import { useShellInfo } from "@/ui/shell";
 
 /** The account's saved cards, newest first (API-CONTRACT §6). */
 export default function SavedScreen() {
-  const colors = useColors();
+  const c = useColors();
   const { api } = useSession();
   const [cards, setCards] = useState<ScrollCard[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useShellInfo({ crumbs: ["Saved cards"] });
 
   // Reloaded whenever the screen comes into focus, so a card saved in the feed
   // is here on return.
@@ -39,7 +44,7 @@ export default function SavedScreen() {
 
   async function unsave(card: ScrollCard) {
     const before = cards;
-    setCards((current) => current?.filter((c) => c.id !== card.id) ?? null);
+    setCards((current) => current?.filter((x) => x.id !== card.id) ?? null);
     try {
       await api(`/v1/saves/${card.id}`, { method: "DELETE" });
     } catch {
@@ -47,17 +52,13 @@ export default function SavedScreen() {
     }
   }
 
-  if (error) {
-    return <Centered><Text style={{ color: colors.danger }}>{error}</Text></Centered>;
-  }
-  if (!cards) {
-    return <Centered><ActivityIndicator color={colors.accent} /></Centered>;
-  }
+  if (error) return <Centered><Text style={[Type.ui, { color: c.danger }]}>{error}</Text></Centered>;
+  if (!cards) return <Centered><ActivityIndicator color={c.accent} /></Centered>;
   if (cards.length === 0) {
     return (
       <Centered>
-        <Text style={{ color: colors.textSecondary, textAlign: "center" }}>
-          Nothing saved yet. Tap ☆ Save on a card to keep it here.
+        <Text style={[Type.italic, { color: c.textSecondary, textAlign: "center", fontSize: 17 }]}>
+          Nothing saved yet. Press S, or tap Save on a card, to keep it here.
         </Text>
       </Centered>
     );
@@ -65,20 +66,33 @@ export default function SavedScreen() {
 
   return (
     <FlatList
-      style={{ backgroundColor: colors.background }}
+      style={{ backgroundColor: c.background }}
       contentContainerStyle={styles.list}
       data={cards}
-      keyExtractor={(c) => c.id}
+      keyExtractor={(x) => x.id}
+      ListHeaderComponent={
+        <View style={styles.header}>
+          <Label tone="accent" strong>Saved cards</Label>
+          <Text style={[Type.italic, { color: c.textSecondary }]}>
+            {cards.length} card{cards.length === 1 ? "" : "s"} kept for later
+          </Text>
+        </View>
+      }
       renderItem={({ item }) => (
-        <View style={[styles.item, { backgroundColor: colors.backgroundElement }]}>
-          <Text style={[styles.topic, { color: colors.textSecondary }]}>{item.topic.name}</Text>
-          <Text style={[styles.content, { color: colors.text }]}>{item.content}</Text>
-          <View style={styles.actions}>
+        <View style={[styles.item, { backgroundColor: c.surface, borderColor: c.border }]}>
+          <View style={styles.itemHead}>
+            <Text style={[Type.displayCompact, { color: c.text, fontSize: 26, lineHeight: 32, flexShrink: 1 }]}>
+              {item.topic.name}
+            </Text>
+            <TrustBadge label={item.trust_label} />
+          </View>
+          <Text style={[Type.bodySmall, { color: c.text }]}>{item.content}</Text>
+          <View style={[styles.actions, { borderTopColor: c.border }]}>
             <Pressable onPress={() => void WebBrowser.openBrowserAsync(item.source_url)}>
-              <Text style={{ color: colors.accent, fontWeight: "600" }}>Source ↗</Text>
+              <Text style={[Type.ui, { color: c.slate, textDecorationLine: "underline", fontSize: 13 }]}>↗ Source</Text>
             </Pressable>
             <Pressable onPress={() => void unsave(item)}>
-              <Text style={{ color: colors.textSecondary, fontWeight: "600" }}>Remove</Text>
+              <Label tone="muted" strong>Remove</Label>
             </Pressable>
           </View>
         </View>
@@ -88,15 +102,15 @@ export default function SavedScreen() {
 }
 
 function Centered({ children }: { children: ReactNode }) {
-  const colors = useColors();
-  return <View style={[styles.centered, { backgroundColor: colors.background }]}>{children}</View>;
+  const c = useColors();
+  return <View style={[styles.centered, { backgroundColor: c.background }]}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
   centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: Spacing.four },
-  list: { padding: Spacing.three, gap: Spacing.three, alignItems: "center" },
-  item: { width: "100%", maxWidth: Math.min(MaxContentWidth, 640), borderRadius: 16, padding: Spacing.three, gap: Spacing.two },
-  topic: { fontSize: 12, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 },
-  content: { fontSize: 16, lineHeight: 23 },
-  actions: { flexDirection: "row", justifyContent: "space-between", marginTop: Spacing.one },
+  list: { padding: Spacing.four, gap: Spacing.three, alignItems: "center", paddingBottom: 80 },
+  header: { width: "100%", maxWidth: MaxContentWidth, gap: 6, marginBottom: Spacing.two },
+  item: { width: "100%", maxWidth: MaxContentWidth, borderWidth: 1, borderRadius: 6, padding: Spacing.four, gap: Spacing.three },
+  itemHead: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: Spacing.three },
+  actions: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, paddingTop: Spacing.three },
 });

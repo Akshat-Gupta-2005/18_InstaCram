@@ -46,17 +46,26 @@ EXPO_PUBLIC_API_URL=http://192.168.1.20:3000
 
 ```
 src/app/                 routes (Expo Router)
-  _layout.tsx            session gate: signed-out users only see /login
+  _layout.tsx            fonts + session gate: signed-out users only see /login
   login.tsx              developer login
+  (app)/_layout.tsx      desktop frame (sidebar + top bar) on wide screens
   (app)/index.tsx        "What do you want to learn?"
-  (app)/feed/[field].tsx the feed - one card per swipe
+  (app)/feed/[field].tsx the feed - Reader on desktop, SwipeFeed on phones
   (app)/saved.tsx        saved cards
 src/api/                 the one request function + types mirroring Docs/API-CONTRACT.md
 src/auth/                session state; token in the keychain (native) or localStorage (web)
+src/constants/           palettes (parchment / ink), fonts, type styles, theme toggle
+src/ui/                  shared primitives (labels, key caps, trust badge) and the desktop shell
 src/feed/use-feed.ts     paging, polling, view logging - read its header before changing it
-src/feed/card.tsx        a card: source link, trust label, why it matters, recall, save
+src/feed/reader.tsx      desktop reader: one card, peeking neighbours, J/K/Space/S/Esc
+src/feed/swipe-feed.tsx  phone layout: one full-screen card per swipe
+src/feed/card.tsx        a card: source link, trust label, why it matters, recall, save, copy
 src/feed/footer.tsx      the last page: waiting state, or the end-of-field card
 ```
+
+## Design
+
+The "reading room" direction: a parchment page, serif reading type, small-caps labels, a deep red accent. Desktop (≥ 1000 px wide) is a keyboard-driven reader; phones swipe one card at a time. Everything on screen comes from real data — see `Docs/DECISIONS.md` (2026-09-17) for what the reference design showed that the app deliberately does not.
 
 ## Two rules the feed must keep
 
