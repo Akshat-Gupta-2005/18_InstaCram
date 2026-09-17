@@ -15,6 +15,8 @@ export interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   body?: unknown;
   token?: string | null;
+  /** Web: let the request finish after the page unloads (refresh, tab closed). */
+  keepalive?: boolean;
 }
 
 /**
@@ -34,6 +36,7 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
       method: opts.method ?? "GET",
       headers,
       body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+      keepalive: opts.keepalive,
     });
   } catch {
     throw new ApiError(0, "network_error", `Could not reach the server at ${API_URL}`);

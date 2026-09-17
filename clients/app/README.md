@@ -71,5 +71,5 @@ The "reading room" direction: a parchment page, serif reading type, small-caps l
 
 From `Docs/API-CONTRACT.md` §1 — both corrupt data silently if broken:
 
-1. **Log a view when a card is displayed, never when it is fetched.** The app prefetches, so it holds cards it has not shown. `use-feed.ts` records a view only once a card has been mostly on screen for 600 ms.
+1. **Log a view when a card is displayed, never when it is fetched.** The app prefetches, so it holds cards it has not shown. `use-feed.ts` records a view only once a card has been mostly on screen for 600 ms, sends it about a second later, and sends anything still waiting when the page is closed or refreshed (web) or the app is backgrounded (native). A view that never reaches the server hands the same card out again on the next visit.
 2. **Poll at the server's cadence** — `retry_after_ms`, not a hardcoded interval.

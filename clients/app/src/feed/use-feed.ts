@@ -15,6 +15,7 @@
  * but not yet displayed, and therefore not yet viewed. They are de-duplicated by id.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AppState, Platform } from "react-native";
 
 import { ApiError } from "@/api/client";
 import type { ExpandResponse, FeedPage, ScrollCard } from "@/api/types";
@@ -28,7 +29,12 @@ interface PendingView {
   viewed_at: string;
 }
 
-/** How often displayed cards are sent to the server if nothing else flushes them. */
+/**
+ * A displayed card is sent this soon after it is recorded - short enough that a
+ * refresh or a killed app rarely loses one, long enough that J-J-J batches.
+ */
+const FLUSH_AFTER_MS = 1000;
+/** Retry cadence for views that failed to send. */
 const FLUSH_EVERY_MS = 5000;
 
 export function useFeed(field: string, mode: FeedMode) {
@@ -48,12 +54,18 @@ export function useFeed(field: string, mode: FeedMode) {
   /** Stops an immediate reload from repeating when the last one brought nothing new. */
   const lastLoadAt = useRef<string | null>(null);
 
-  const flushViews = useCallback(async () => {
+  const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushViews = useCallback(async (keepalive = false) => {
+    if (flushTimer.current) {
+      clearTimeout(flushTimer.current);
+      flushTimer.current = null;
+    }
     if (pendingViews.current.length === 0) return;
     const batch = pendingViews.current;
     pendingViews.current = [];
     try {
-      await api("/v1/views", { method: "POST", body: { views: batch } });
+      await api("/v1/views", { method: "POST", body: { views: batch }, keepalive });
     } catch {
       // Kept, not dropped: a lost view would hand the same card out again and
       // corrupt the one dataset that cannot be rebuilt. Retried on the next flush.
@@ -91,11 +103,35 @@ export function useFeed(field: string, mode: FeedMode) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [field, mode]);
 
-  // Flush on a timer, and once more on leaving the screen.
+  // Flush on a timer (retries), once more on leaving the screen, and - the case
+  // that lost views - when the page or app goes away. Leaving the screen inside
+  // the app unmounts this hook, but a browser refresh or closed tab does not: no
+  // cleanup runs, and a view waiting in memory was lost, so that card was handed
+  // out again as the first card of the next visit. `keepalive` lets the request
+  // outlive the page.
   useEffect(() => {
     const timer = setInterval(() => void flushViews(), FLUSH_EVERY_MS);
+    const leaving = () => void flushViews(true);
+    let unsubscribe: () => void;
+    if (Platform.OS === "web") {
+      const onVisibility = () => {
+        if (document.visibilityState === "hidden") leaving();
+      };
+      window.addEventListener("pagehide", leaving);
+      document.addEventListener("visibilitychange", onVisibility);
+      unsubscribe = () => {
+        window.removeEventListener("pagehide", leaving);
+        document.removeEventListener("visibilitychange", onVisibility);
+      };
+    } else {
+      const sub = AppState.addEventListener("change", (state) => {
+        if (state !== "active") leaving();
+      });
+      unsubscribe = () => sub.remove();
+    }
     return () => {
       clearInterval(timer);
+      unsubscribe();
       void flushViews();
     };
   }, [flushViews]);
@@ -140,8 +176,11 @@ export function useFeed(field: string, mode: FeedMode) {
       if (displayed.current.has(card.id)) return;
       displayed.current.add(card.id);
       pendingViews.current.push({ scroll_id: card.id, viewed_at: new Date().toISOString() });
+      if (!flushTimer.current) {
+        flushTimer.current = setTimeout(() => void flushViews(), FLUSH_AFTER_MS);
+      }
     },
-    [],
+    [flushViews],
   );
 
   /** Reaching the footer: flush and reload, which is what turns "done" into `exhausted`. */
