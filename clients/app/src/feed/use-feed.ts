@@ -120,11 +120,20 @@ export function useFeed(field: string, mode: FeedMode) {
     void load();
   }, [page, cards.length, position, load]);
 
-  /** Called as items come on screen. Only cards count as views; the footer does not. */
+  /**
+   * Called as items come on screen, with the card itself (null for the footer).
+   * Only cards count as views.
+   *
+   * The card is passed in rather than looked up by index, which removes any
+   * dependence on this hook's state having caught up with what the list is
+   * showing. (It was changed while chasing a card that was displayed and never
+   * logged; a deterministic test then showed the old lookup recorded views fine,
+   * and the likelier cause was the test itself scrolling past that card in under
+   * the 600ms that counts as an impression - which is correct behaviour.)
+   */
   const onDisplayed = useCallback(
-    (index: number) => {
+    (index: number, card: ScrollCard | null) => {
       setPosition(index);
-      const card = cards[index];
       if (!card) return;
       // Once per card per visit to the screen. Coming back to a card while
       // scrolling is not a new impression.
@@ -132,7 +141,7 @@ export function useFeed(field: string, mode: FeedMode) {
       displayed.current.add(card.id);
       pendingViews.current.push({ scroll_id: card.id, viewed_at: new Date().toISOString() });
     },
-    [cards],
+    [],
   );
 
   /** Reaching the footer: flush and reload, which is what turns "done" into `exhausted`. */

@@ -7,3 +7,16 @@
   --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;
   --font-serif: Georgia, 'Times New Roman', serif;
 }
+
+/*
+ * Scroll anchoring off, everywhere. A browser keeps the element you are looking at
+ * in place when content is inserted above it. The feed inserts new cards ABOVE its
+ * last page (the waiting state), so with anchoring on, a user waiting for cards
+ * stays pinned to the spinner while the cards that just arrived sit out of sight
+ * above - they look like nothing ever came. Native apps do not anchor, so this
+ * also makes the web build behave like the phones: the new card takes the place
+ * on screen where the waiting state was.
+ */
+* {
+  overflow-anchor: none;
+}

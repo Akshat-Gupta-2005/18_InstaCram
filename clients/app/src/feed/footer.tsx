@@ -95,6 +95,13 @@ function Waiting({ page }: { page: FeedPage }) {
             ? "Working out which topics belong in this field…"
             : "Checking for new cards…"}
       </Text>
+      {/* Timings measured on this project's local model, so a first-time user is
+          not left wondering whether anything is happening: a new field's first
+          cards took ~9 minutes in live use, and single topics 1.5 to 10. */}
+      <Text style={[styles.text, { color: colors.textSecondary }]}>
+        A new field's first cards can take several minutes. Topics are made one at a time, and each takes a few
+        minutes. New cards appear here on their own - you can leave this screen and come back.
+      </Text>
     </>
   );
 }
