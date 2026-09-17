@@ -21,11 +21,40 @@ export const config = {
   adjacentFieldLimit: 5,
 
   /**
-   * "dev" trusts the bearer token as the user's identity. It exists so the
-   * feed and account paths can be built and tested before Firebase
-   * credentials exist, and it MUST NOT be used outside local development.
+   * How a request proves who it is.
+   *
+   *   "dev"        trusts the bearer token as the identity. The test suite's mode:
+   *                it lets a test "log in" by choosing a name. Anyone can be
+   *                anyone, so it MUST NOT be used for a running app.
+   *   "dev-login"  a developer ID and password from .env are exchanged for a
+   *                signed token at POST /v1/auth/login, and every request must
+   *                carry a token that verifies. The mode for running the app
+   *                before real sign-in exists.
+   *   "firebase"   Firebase ID tokens - email/password and Google sign-in.
+   *                Not wired yet (task 2b.1); refuses rather than pretending.
    */
-  authMode: (process.env.AUTH_MODE ?? "dev") as "dev" | "firebase",
+  authMode: (process.env.AUTH_MODE ?? "dev") as "dev" | "dev-login" | "firebase",
+
+  /** dev-login only. Both must be set, or login is refused. */
+  devLoginId: process.env.DEV_LOGIN_ID ?? "",
+  devLoginPassword: process.env.DEV_LOGIN_PASSWORD ?? "",
+
+  /**
+   * Signs dev-login tokens. Anyone holding it can mint a token for any identity,
+   * so it lives in .env, never in code, and is refused if shorter than 32 chars.
+   */
+  authTokenSecret: process.env.AUTH_TOKEN_SECRET ?? "",
+  authTokenTtlHours: Number(process.env.AUTH_TOKEN_TTL_HOURS ?? 24 * 7),
+
+  /**
+   * Browser origins allowed to call the API. The web build of the app is served
+   * from its own dev server (port 8082 - 8081, Expo's default, is taken by the
+   * embeddings service), so without this every browser request is blocked.
+   */
+  corsOrigins: (process.env.CORS_ORIGINS ?? "http://localhost:8082")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean),
 
   qdrantUrl: process.env.QDRANT_URL ?? "http://localhost:6333",
 

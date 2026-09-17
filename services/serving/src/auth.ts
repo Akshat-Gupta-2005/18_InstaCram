@@ -1,4 +1,6 @@
 import type { RequestHandler } from "express";
+import { DEV_IDENTITY_PREFIX, devLoginMisconfiguration } from "./auth/devLogin.js";
+import { verifyToken } from "./auth/tokens.js";
 import { config } from "./config.js";
 import { ApiError } from "./http.js";
 import { findOrCreateAccount } from "./repo/accounts.js";
@@ -10,13 +12,17 @@ declare module "express-serve-static-core" {
 }
 
 /**
- * Resolves the caller's account.
+ * Resolves the caller's account. How the token is checked depends on AUTH_MODE
+ * (see config.ts):
  *
- * DEV MODE TRUSTS THE TOKEN AS THE IDENTITY. `Authorization: Bearer alice` is
- * the account with firebase_uid "alice", created on first use. It exists only so
- * the feed and account paths could be built and tested before Firebase
- * service-account credentials existed, and it must never run outside local
- * development. Firebase verification (task 2b.1) refuses rather than pretending.
+ *   dev        TRUSTS THE TOKEN AS THE IDENTITY. `Bearer alice` is the account
+ *              "alice", created on first use. For the test suite only.
+ *   dev-login  the token must be one issued by POST /v1/auth/login and must
+ *              verify; a guessed or edited token is refused.
+ *   firebase   not wired yet (task 2b.1). Refuses rather than pretending.
+ *
+ * When Google sign-in arrives through Firebase, it becomes another branch here
+ * that yields an identity - nothing downstream of this function changes.
  */
 export const requireAccount: RequestHandler = (req, _res, next) => {
   const header = req.get("authorization") ?? "";
@@ -27,7 +33,26 @@ export const requireAccount: RequestHandler = (req, _res, next) => {
     return;
   }
 
-  if (config.authMode !== "dev") {
+  let identity: string;
+  let email: string;
+
+  if (config.authMode === "dev") {
+    identity = token;
+    email = `${token}@dev.local`;
+  } else if (config.authMode === "dev-login") {
+    const problem = devLoginMisconfiguration();
+    if (problem) {
+      next(new ApiError(501, "auth_not_configured", problem));
+      return;
+    }
+    const claims = verifyToken(token, config.authTokenSecret);
+    if (!claims) {
+      next(new ApiError(401, "invalid_token", "token is invalid or expired; log in again"));
+      return;
+    }
+    identity = claims.sub;
+    email = `${claims.sub.slice(DEV_IDENTITY_PREFIX.length)}@dev.local`;
+  } else {
     next(
       new ApiError(
         501,
@@ -38,7 +63,7 @@ export const requireAccount: RequestHandler = (req, _res, next) => {
     return;
   }
 
-  findOrCreateAccount(token, `${token}@dev.local`)
+  findOrCreateAccount(identity, email)
     .then((account) => {
       req.accountId = account.id;
       next();

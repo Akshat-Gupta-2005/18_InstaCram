@@ -73,6 +73,13 @@ services:
       # these lines, tuning the threshold in .env would change host runs and leave
       # containers on the code default, with no error to notice.
       AUTH_MODE: ${AUTH_MODE:-dev}
+      # dev-login. Without these forwarded, the container would run dev-login with
+      # no credentials and refuse every login - correctly, but confusingly.
+      DEV_LOGIN_ID: ${DEV_LOGIN_ID:-}
+      DEV_LOGIN_PASSWORD: ${DEV_LOGIN_PASSWORD:-}
+      AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:-}
+      AUTH_TOKEN_TTL_HOURS: ${AUTH_TOKEN_TTL_HOURS:-168}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8082}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-768}
       EMBEDDING_TEXT_PREFIX: ${EMBEDDING_TEXT_PREFIX:-}
       TOPIC_MATCH_THRESHOLD: ${TOPIC_MATCH_THRESHOLD:-0.955}
