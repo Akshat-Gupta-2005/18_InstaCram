@@ -27,8 +27,8 @@ Throughout these files, ★ marks **a non-obvious engineering decision — the p
 | Orchestration | Kubernetes on GCP (GKE) | See §1.1 — chosen on a pricing comparison, not preference. |
 | CI/CD | GitHub Actions | Free for this repo; runs Docker builds, Playwright/Selenium suites and the K8s deploy in one place. |
 | Monitoring | Prometheus + Grafana | Explicit project requirement. The two services have different failure profiles (§2), so per-service metrics are needed to tell "slow" from "broken". |
-| Mobile client | React Native (Expo) — **UNCONFIRMED** | Proposed from prior project history, never explicitly agreed. Flagged in [FEATURES.md](FEATURES.md) open items. Do not treat as decided. |
-| Web client | Next.js (React) — **UNCONFIRMED** | Same caveat. |
+| Client — web, iOS and Android | **One Expo codebase** (Expo SDK 57, Expo Router), confirmed 2026-09-17 | Replaces the earlier unconfirmed pair of Expo for mobile and Next.js for web. The product is a logged-in card feed on every screen size, so Next.js's main advantage — server rendering and SEO — has nothing to index, while two frontends would double every screen. The web build is a single-page app (`web.output: "single"`). A public marketing site, if ever wanted, can be a separate small site. |
+| Sign-in | Developer ID + password now (`AUTH_MODE=dev-login`); Google via Firebase Auth later | The server checks the developer credentials and issues a signed token. Firebase will become a second way to obtain a token, verified in the same `requireAccount`, so nothing downstream changes. |
 
 ### 1.1 Deliberately not used
 
@@ -345,8 +345,7 @@ The full target layout is below. Parts of it now exist; the code map says which.
 │   │   └── app/reindex/         rebuild Qdrant collections from Postgres
 │   └── llm-gateway/             LiteLLM config and container
 ├── clients/
-│   ├── mobile/                  framework UNCONFIRMED
-│   └── web/                     framework UNCONFIRMED
+│   └── app/                     Expo: website + iOS + Android from one codebase
 ├── infra/
 │   ├── docker/                  compose file for local stack
 │   ├── k8s/                     manifests, identical for kind and GKE

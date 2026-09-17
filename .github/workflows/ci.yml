@@ -35,6 +35,26 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
+  app:
+    runs-on: ubuntu-latest
+    # The Expo app (web, iOS, Android). Typecheck, then a production web export,
+    # which compiles every route - the dev server only compiles routes on demand,
+    # so a broken screen can hide until someone opens it.
+    defaults:
+      run:
+        working-directory: clients/app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      # Expo writes this on `expo start`; it is gitignored, and tsc needs it to
+      # resolve Expo's ambient types (the CSS import). Same one line Expo writes.
+      - run: echo '/// <reference types="expo/types" />' > expo-env.d.ts
+      - run: npx tsc --noEmit
+      - run: npx expo export --platform web --output-dir dist
+
   pipeline:
     runs-on: ubuntu-latest
     # The topic worker's claim tests are SQL - SKIP LOCKED, a stale-claim window -
