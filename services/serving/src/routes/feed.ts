@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { config } from "../config.js";
-import { buildFeedPage, buildRevisionPage } from "../feed/feedService.js";
+import { buildFeedPage, buildRevisionPage, expandField } from "../feed/feedService.js";
 import { handler, pageSize, requireString } from "../http.js";
 import { adjacentFields, getField } from "../repo/fields.js";
 import { ApiError } from "../http.js";
@@ -32,6 +32,17 @@ feedRouter.post(
     const field = requireString(body.field, "field", 100);
     const limit = pageSize(body.limit, config.defaultPageSize, config.maxPageSize);
     res.json(await buildRevisionPage(field, req.accountId, limit));
+  }),
+);
+
+/** "More topics" (task 5.6). Returns at once; the result arrives via the feed. */
+feedRouter.post(
+  "/fields/:fieldId/expand",
+  handler(async (req, res) => {
+    const fieldId = req.params.fieldId ?? "";
+    const field = await getField(fieldId);
+    if (!field) throw new ApiError(404, "field_not_found", "no such field");
+    res.status(202).json(await expandField(field.id));
   }),
 );
 

@@ -40,4 +40,27 @@ export interface FeedPage {
   failed_topics: FailedTopic[];
   exhausted: boolean;
   end_card: EndCard | null;
+  /**
+   * The field's most recent expansion. A "more topics" tap returns before its
+   * candidates exist, so its result arrives here. When `kind` is "more", `status`
+   * is "done" and all three counts are 0, the field is genuinely exhausted and the
+   * client should stop offering the action.
+   */
+  last_expansion: LastExpansion | null;
+}
+
+export interface LastExpansion {
+  kind: "initial" | "more";
+  status: "running" | "done" | "failed";
+  topics_queued: number;
+  topics_linked: number;
+  failed_retried: number;
+}
+
+/** Response of POST /v1/fields/{field_id}/expand. */
+export interface ExpandResponse {
+  /** "already_running" when an expansion for the field was still outstanding. */
+  expansion: "queued" | "already_running";
+  failed_retried: number;
+  retry_after_ms: number;
 }

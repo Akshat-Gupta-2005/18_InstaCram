@@ -21,6 +21,7 @@ import {
   claimExpansion,
   completeExpansion,
   failExpansion,
+  linkedTopicNames,
   reapStaleExpansions,
   type ExpansionCounts,
   type ExpansionJob,
@@ -48,10 +49,12 @@ export async function expandOnce(deps: ExpansionDeps): Promise<ExpansionResult> 
 
   let candidates: Candidate[];
   try {
-    // 'more' (task 5.6) will pass the field's existing topic names here so the
-    // generator aims deeper instead of re-proposing what exists. An initial
-    // expansion has nothing to exclude.
-    candidates = await deps.generate(job.fieldName, []);
+    // 'more' (task 5.6) passes the field's existing topic names so the generator
+    // aims deeper instead of re-proposing what exists. Read at RUN time, not at
+    // enqueue time: an initial expansion finishing in between may have linked
+    // topics the tap should also exclude. An initial expansion has none.
+    const exclude = job.kind === "more" ? await linkedTopicNames(job.fieldId) : [];
+    candidates = await deps.generate(job.fieldName, exclude);
   } catch (err) {
     const error = `candidate generation failed: ${describe(err)}`;
     return { kind: await failExpansion(job, error, deps.maxAttempts, deps.baseBackoffMs), job, error };
@@ -64,6 +67,7 @@ export async function expandOnce(deps: ExpansionDeps): Promise<ExpansionResult> 
     requeued: 0,
     created: 0,
     resolveErrors: 0,
+    linkedExisting: 0,
   };
   let firstError: string | null = null;
 
@@ -71,6 +75,7 @@ export async function expandOnce(deps: ExpansionDeps): Promise<ExpansionResult> 
     try {
       const r = await resolveCandidate(job.fieldId, candidate, deps.resolve);
       counts[r.outcome]++;
+      if ((r.outcome === "reused" || r.outcome === "joined") && r.newLink) counts.linkedExisting++;
     } catch (err) {
       counts.resolveErrors++;
       firstError ??= `resolving ${JSON.stringify(candidate.name)}: ${describe(err)}`;

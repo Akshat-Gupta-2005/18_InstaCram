@@ -35,6 +35,12 @@ export function errorMiddleware(
   res.status(500).json({ error: { code: "internal", message: "internal error" } });
 }
 
+/**
+ * Ids arrive in URLs and bodies. Checked before a query, because Postgres answers
+ * a malformed uuid with a syntax error that would otherwise surface as a 500.
+ */
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** Clamp a client-supplied page size instead of trusting it. */
 export function pageSize(raw: unknown, fallback: number, max: number): number {
   const n = typeof raw === "number" ? raw : Number(raw);

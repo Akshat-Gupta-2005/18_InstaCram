@@ -122,16 +122,44 @@ The feed never silently loops. Continuing is always one of the three actions bel
 
 Re-runs candidate generation for the field with its existing topic names passed as exclusions, and **re-queues the field's failed topics** for another attempt. User-triggered only.
 
+**Returns immediately (`202`).** Candidate generation takes 32–54s and runs in the background, so this response cannot say how many new topics the tap produced. That result arrives on the feed page as `last_expansion` (below). Keep polling the feed as usual — `generating` is `true` while the expansion is owed.
+
 ```json
-{ "topics_queued": 6, "failed_retried": 1, "retry_after_ms": 4000 }
+{ "expansion": "queued", "failed_retried": 1, "retry_after_ms": 3000 }
 ```
 
 | Field | Meaning |
 |---|---|
-| `topics_queued` | New candidate topics sent to the pipeline |
-| `failed_retried` | Previously failed topics sent back for another run |
+| `expansion` | `queued`, or `already_running` if an expansion for this field was still outstanding. Repeated taps do not stack. |
+| `failed_retried` | Previously failed topics sent back for another run. Known immediately. |
 
-If both are `0`, the generator produced nothing new and nothing was waiting to be retried. The field is genuinely exhausted, and the client should say so rather than offering the action again.
+`404 field_not_found` for an unknown field, including an id that is not a uuid.
+
+#### `last_expansion` on the feed page
+
+Present on `POST /v1/feed` and `POST /v1/feed/revision`; `null` for a field that has never been expanded.
+
+```json
+"last_expansion": {
+  "kind": "more",
+  "status": "done",
+  "topics_queued": 4,
+  "topics_linked": 2,
+  "failed_retried": 1
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `kind` | `initial` (the field's first request) or `more` (a tap) |
+| `status` | `running`, `done`, or `failed`. Counts are `0` until it is `done`. |
+| `topics_queued` | Topics sent to the pipeline: newly created, plus earlier-failed topics a candidate matched |
+| `topics_linked` | Topics **another field already generated**, newly linked to this one — new cards at no generation cost |
+| `failed_retried` | The tap's re-queued failed topics |
+
+**The exhaustion signal:** when `kind` is `more`, `status` is `done`, and all three counts are `0`, the field is genuinely exhausted. Say so, and stop offering the action. A candidate the field already had does not count — it adds nothing.
+
+*Changed 2026-09-16:* this endpoint previously promised `topics_queued` in its own response. That became impossible once candidate generation moved to the background, and no client had been built against it yet (DECISIONS.md, 2026-09-16).
 
 ### `POST /v1/feed/revision`
 

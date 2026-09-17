@@ -5,7 +5,11 @@
  */
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { pool } from "../src/db/pool.js";
-import { enqueueInitialExpansion } from "../src/expansion/queue.js";
+import {
+  enqueueInitialExpansion,
+  enqueueMoreExpansion,
+  requeueFailedTopics,
+} from "../src/expansion/queue.js";
 import { expandOnce, type ExpansionDeps } from "../src/expansion/worker.js";
 import { findOrCreateField } from "../src/repo/fields.js";
 import type { Candidate } from "../src/topics/candidates.js";
@@ -171,6 +175,61 @@ describe("a worker that dies", () => {
     await newFieldWithExpansion();
     await pool.query(`UPDATE field_expansion SET status = 'running', attempts = 1, claimed_at = now()`);
     expect((await expandOnce(deps({ staleMs: 600_000 }))).kind).toBe("idle");
+  });
+});
+
+describe("task 5.6: more topics", () => {
+  it("passes the field's existing topic names to the generator as exclusions", async () => {
+    // Java Utils is seeded with HashMap and Optional. Without the exclusions the
+    // generator re-proposes the field's most obvious topics, which are exactly
+    // the ones it already has.
+    const seen: string[][] = [];
+    expect(await enqueueMoreExpansion(ids.fields.javaUtils)).toBe(true);
+
+    const result = await expandOnce(
+      deps({
+        generate: async (_field, exclude) => {
+          seen.push(exclude);
+          return [TREEMAP];
+        },
+      }),
+    );
+
+    expect(result.kind).toBe("done");
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toEqual(expect.arrayContaining(["HashMap", "Optional"]));
+  });
+
+  it("gives an initial expansion no exclusions", async () => {
+    await newFieldWithExpansion();
+    const seen: string[][] = [];
+    await expandOnce(deps({ generate: async (_f, exclude) => (seen.push(exclude), [TREEMAP]) }));
+    expect(seen).toEqual([[]]);
+  });
+
+  it("refuses to stack a second expansion while one is outstanding", async () => {
+    // Repeated taps must not buy repeated 32-54s LLM runs.
+    const fieldId = await newFieldWithExpansion();
+    expect(await enqueueMoreExpansion(fieldId)).toBe(false);
+
+    await expandOnce(deps());
+    expect(await enqueueMoreExpansion(fieldId)).toBe(true);
+    expect(await enqueueMoreExpansion(fieldId)).toBe(false);
+  });
+
+  it("re-queues the field's empty topics, and no other field's", async () => {
+    // Java Streams holds the seeded empty topic "Lazy Evaluation".
+    const otherEmpty = await pool.query<{ id: string }>(
+      `INSERT INTO topic (name, description, status) VALUES ('Elsewhere', 'x', 'empty') RETURNING id`,
+    );
+    await pool.query(`UPDATE topic SET claimed_at = now() WHERE id = $1`, [ids.topics.lazyEval]);
+
+    expect(await requeueFailedTopics(ids.fields.javaStreams)).toBe(1);
+
+    const { rows } = await pool.query(`SELECT status, claimed_at FROM topic WHERE id = $1`, [ids.topics.lazyEval]);
+    expect(rows[0]).toMatchObject({ status: "pending", claimed_at: null });
+    const { rows: other } = await pool.query(`SELECT status FROM topic WHERE id = $1`, [otherEmpty.rows[0]!.id]);
+    expect(other[0]).toMatchObject({ status: "empty" });
   });
 });
 

@@ -1,5 +1,11 @@
 import { config } from "../config.js";
-import { enqueueInitialExpansion, openExpansionExists } from "../expansion/queue.js";
+import {
+  enqueueInitialExpansion,
+  enqueueMoreExpansion,
+  latestExpansion,
+  openExpansionExists,
+  requeueFailedTopics,
+} from "../expansion/queue.js";
 import { adjacentFields, findOrCreateField, type Field } from "../repo/fields.js";
 import {
   failedTopics,
@@ -8,7 +14,7 @@ import {
   unviewedPage,
   viewedCountInField,
 } from "../repo/feed.js";
-import type { FeedPage } from "../types.js";
+import type { ExpandResponse, FeedPage } from "../types.js";
 
 /**
  * Assembles one page. The three states the client must keep apart:
@@ -33,11 +39,12 @@ export async function buildFeedPage(
   // which is what stops polling from re-running candidate generation (P16).
   await enqueueInitialExpansion(field.id);
 
-  const [scrolls, pending, failed, expanding] = await Promise.all([
+  const [scrolls, pending, failed, expanding, lastExpansion] = await Promise.all([
     unviewedPage(field.id, accountId, limit),
     pendingTopicCount(field.id),
     failedTopics(field.id),
     openExpansionExists(field.id),
+    latestExpansion(field.id),
   ]);
 
   // An expansion still owed counts as generating. Without it, a brand-new field
@@ -56,6 +63,7 @@ export async function buildFeedPage(
     failed_topics: failed,
     exhausted,
     end_card: null,
+    last_expansion: lastExpansion,
   };
 
   if (generating) page.retry_after_ms = config.retryAfterMs;
@@ -83,9 +91,10 @@ export async function buildRevisionPage(
   limit: number,
 ): Promise<FeedPage> {
   const field: Field = await findOrCreateField(fieldName);
-  const [scrolls, failed] = await Promise.all([
+  const [scrolls, failed, lastExpansion] = await Promise.all([
     revisionPage(field.id, accountId, limit),
     failedTopics(field.id),
+    latestExpansion(field.id),
   ]);
 
   return {
@@ -96,5 +105,28 @@ export async function buildRevisionPage(
     failed_topics: failed,
     exhausted: false,
     end_card: null,
+    last_expansion: lastExpansion,
+  };
+}
+
+/**
+ * Task 5.6, the "more topics" tap. User-triggered only - never called from paging
+ * or polling, because both of its effects cost pipeline and LLM time (P16, P17).
+ *
+ * It returns at once. Candidate generation takes 32-54s in the background, so
+ * how many NEW topics the tap produced is not known yet; it arrives in the feed's
+ * `last_expansion` (DECISIONS 2026-09-16). Re-queuing failed topics is immediate,
+ * so that count is returned here.
+ *
+ * Failed topics are re-queued even when an expansion is already running: that
+ * part does not depend on the generator, and the user asked for it.
+ */
+export async function expandField(fieldId: string): Promise<ExpandResponse> {
+  const failedRetried = await requeueFailedTopics(fieldId);
+  const queued = await enqueueMoreExpansion(fieldId, failedRetried);
+  return {
+    expansion: queued ? "queued" : "already_running",
+    failed_retried: failedRetried,
+    retry_after_ms: config.retryAfterMs,
   };
 }

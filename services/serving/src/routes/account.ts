@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireAccount } from "../auth.js";
-import { ApiError, handler } from "../http.js";
+import { ApiError, handler, UUID } from "../http.js";
 import {
   addSave,
   eraseAccount,
@@ -13,8 +13,6 @@ import {
 export const accountRouter = Router();
 
 accountRouter.use(requireAccount);
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Impressions, sent by the client when cards are DISPLAYED. Duplicates are kept

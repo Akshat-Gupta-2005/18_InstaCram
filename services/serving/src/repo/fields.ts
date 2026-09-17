@@ -1,4 +1,5 @@
 import { pool } from "../db/pool.js";
+import { UUID } from "../http.js";
 import type { AdjacentField } from "../types.js";
 
 export interface Field {
@@ -23,6 +24,9 @@ export async function findOrCreateField(name: string): Promise<Field> {
 }
 
 export async function getField(id: string): Promise<Field | null> {
+  // A malformed id cannot name a field. Without this check Postgres rejects it
+  // with a uuid syntax error, which every field route returned as a 500.
+  if (!UUID.test(id)) return null;
   const { rows } = await pool.query<Field>(`SELECT id, name FROM field WHERE id = $1`, [id]);
   return rows[0] ?? null;
 }

@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { createApp } from "../src/app.js";
 import { pool } from "../src/db/pool.js";
 import { seed } from "../src/seed.js";
-import type { FeedPage, ScrollCard } from "../src/types.js";
+import type { ExpandResponse, FeedPage, ScrollCard } from "../src/types.js";
 
 export async function startServer(): Promise<{ server: Server; base: string }> {
   const server = createApp().listen(0);
@@ -65,6 +65,7 @@ export function client(base: string, token: string) {
     unsave: (scrollId: string) =>
       send<{ saved_scroll_ids: string[] }>("DELETE", `/v1/saves/${scrollId}`),
     eraseAccount: () => send<null>("DELETE", "/v1/account"),
+    expand: (fieldId: string) => send<ExpandResponse>("POST", `/v1/fields/${fieldId}/expand`),
     raw: send,
   };
 }

@@ -43,6 +43,13 @@ export interface Resolution {
   topicId: string;
   /** The similarity that decided a match; null for a created topic. */
   score: number | null;
+  /**
+   * Whether this call added a Field_Topic row. False when the field already had
+   * the topic - a generator re-proposing a name it was told to exclude. "More
+   * topics" must not count that as progress, or a field that gains nothing would
+   * keep offering the action forever.
+   */
+  newLink: boolean;
 }
 
 /**
@@ -194,10 +201,11 @@ export function chooseMatch(matches: Match[]): Match | null {
 async function linkExisting(client: PoolClient, fieldId: string, match: Match): Promise<Resolution> {
   // Idempotent by primary key: re-proposing a topic can never duplicate a link
   // (invariant 2).
-  await client.query(
+  const linked = await client.query(
     `INSERT INTO field_topic (field_id, topic_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
     [fieldId, match.topic.id],
   );
+  const newLink = (linked.rowCount ?? 0) > 0;
 
   if (match.topic.status === "empty") {
     // A candidate proposal IS the sanctioned retry event for an empty topic - and
@@ -208,13 +216,14 @@ async function linkExisting(client: PoolClient, fieldId: string, match: Match): 
       `UPDATE topic SET status = 'pending', claimed_at = NULL WHERE id = $1 AND status = 'empty'`,
       [match.topic.id],
     );
-    return { outcome: "requeued", topicId: match.topic.id, score: match.score };
+    return { outcome: "requeued", topicId: match.topic.id, score: match.score, newLink };
   }
 
   return {
     outcome: match.topic.status === "ready" ? "reused" : "joined",
     topicId: match.topic.id,
     score: match.score,
+    newLink,
   };
 }
 
@@ -241,5 +250,5 @@ async function createPending(
 
   await client.query(`INSERT INTO field_topic (field_id, topic_id) VALUES ($1, $2)`, [fieldId, topicId]);
 
-  return { outcome: "created", topicId, score: null };
+  return { outcome: "created", topicId, score: null, newLink: true };
 }

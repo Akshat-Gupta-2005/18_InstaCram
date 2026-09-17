@@ -7,6 +7,7 @@
  * block each other waiting to find out.
  */
 import { pool } from "../db/pool.js";
+import type { LastExpansion } from "../types.js";
 
 export interface ExpansionJob {
   id: string;
@@ -23,6 +24,8 @@ export interface ExpansionCounts {
   requeued: number;
   created: number;
   resolveErrors: number;
+  /** Existing topics (reused or joined) that this run newly linked to the field. */
+  linkedExisting: number;
 }
 
 /**
@@ -43,6 +46,83 @@ export async function enqueueInitialExpansion(fieldId: string): Promise<boolean>
     [fieldId],
   );
   return (rowCount ?? 0) > 0;
+}
+
+/**
+ * The user's "more topics" tap (task 5.6). Returns whether THIS call queued the
+ * expansion; false means one is already outstanding for the field - the initial
+ * one still running, or an earlier tap - and the unique partial index refused a
+ * second. Stacking taps would buy nothing but repeated 32-54s LLM calls.
+ */
+export async function enqueueMoreExpansion(fieldId: string, failedRetried = 0): Promise<boolean> {
+  // failed_retried is recorded on the job so the feed can report the tap's whole
+  // effect in one place once the expansion finishes.
+  const { rowCount } = await pool.query(
+    `INSERT INTO field_expansion (field_id, kind, failed_retried) VALUES ($1, 'more', $2)
+     ON CONFLICT DO NOTHING`,
+    [fieldId, failedRetried],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+/**
+ * The field's most recent expansion, for the feed. This is where a "more topics"
+ * tap's result arrives, since the tap itself returns before candidates exist.
+ * Counts are 0 while it is still running - they are not yet known.
+ */
+export async function latestExpansion(fieldId: string): Promise<LastExpansion | null> {
+  const { rows } = await pool.query<{
+    kind: "initial" | "more";
+    status: "pending" | "running" | "done" | "failed";
+    created: number | null;
+    requeued: number | null;
+    linked_existing: number | null;
+    failed_retried: number | null;
+  }>(
+    `SELECT kind, status, created, requeued, linked_existing, failed_retried
+     FROM field_expansion WHERE field_id = $1
+     ORDER BY requested_at DESC, id DESC LIMIT 1`,
+    [fieldId],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    kind: row.kind,
+    // A pending row is still owed; the client need not distinguish queued from
+    // running, only "not finished yet".
+    status: row.status === "pending" || row.status === "running" ? "running" : row.status,
+    topics_queued: (row.created ?? 0) + (row.requeued ?? 0),
+    topics_linked: row.linked_existing ?? 0,
+    failed_retried: row.failed_retried ?? 0,
+  };
+}
+
+/**
+ * Sends the field's empty topics back to the pipeline. Without this, "more
+ * topics" could never retry them: the generator is told to exclude names already
+ * linked to the field, so it will not propose them again, and a proposal is the
+ * only other retry event (P17, invariant 6).
+ *
+ * Only ever reached from the user's tap - never from paging or polling (P16).
+ */
+export async function requeueFailedTopics(fieldId: string): Promise<number> {
+  const { rowCount } = await pool.query(
+    `UPDATE topic SET status = 'pending', claimed_at = NULL
+     WHERE status = 'empty'
+       AND id IN (SELECT topic_id FROM field_topic WHERE field_id = $1)`,
+    [fieldId],
+  );
+  return rowCount ?? 0;
+}
+
+/** Topic names already linked to a field: the exclusions for a 'more' expansion. */
+export async function linkedTopicNames(fieldId: string): Promise<string[]> {
+  const { rows } = await pool.query<{ name: string }>(
+    `SELECT t.name FROM field_topic ft JOIN topic t ON t.id = ft.topic_id
+     WHERE ft.field_id = $1 ORDER BY t.name`,
+    [fieldId],
+  );
+  return rows.map((r) => r.name);
 }
 
 /**
@@ -109,7 +189,8 @@ export async function completeExpansion(id: string, counts: ExpansionCounts): Pr
   await pool.query(
     `UPDATE field_expansion
      SET status = 'done', finished_at = now(), last_error = NULL,
-         candidates = $2, reused = $3, joined = $4, requeued = $5, created = $6, resolve_errors = $7
+         candidates = $2, reused = $3, joined = $4, requeued = $5, created = $6, resolve_errors = $7,
+         linked_existing = $8
      WHERE id = $1`,
     [
       id,
@@ -119,6 +200,7 @@ export async function completeExpansion(id: string, counts: ExpansionCounts): Pr
       counts.requeued,
       counts.created,
       counts.resolveErrors,
+      counts.linkedExisting,
     ],
   );
 }
