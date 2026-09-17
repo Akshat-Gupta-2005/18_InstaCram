@@ -18,6 +18,7 @@ AGENT_PROMPTS = [
     "fact-check-chunk.md",
     "fact-check-confirm.md",
     "candidate-topics.md",
+    "adjacent-fields.md",
 ]
 
 
@@ -128,6 +129,7 @@ OUTPUT_KEYS = {
         "supported",
         "not_covered",
     ],
+    "adjacent-fields.md": ["fields"],
     "fact-check-confirm.md": [
         "claim_sentence",
         "excerpt_sentence",

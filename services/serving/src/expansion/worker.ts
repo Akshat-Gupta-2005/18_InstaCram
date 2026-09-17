@@ -15,6 +15,8 @@
  * server or Qdrant being down, not of one bad candidate - is the expansion
  * retried as a whole.
  */
+import { storeSuggestions, suggestionsGenerated } from "../repo/fields.js";
+import { suggestAdjacentFields } from "../topics/adjacent.js";
 import { generateCandidates, type Candidate } from "../topics/candidates.js";
 import { resolveCandidate, type ResolveDeps } from "../topics/resolve.js";
 import {
@@ -29,6 +31,12 @@ import {
 
 export interface ExpansionDeps {
   generate: (field: string, exclude: string[]) => Promise<Candidate[]>;
+  /**
+   * Related-field suggestions for the end card (task 5.7). Optional: absent, the
+   * worker simply generates none. Run after a successful expansion while a field
+   * has none yet.
+   */
+  suggest?: (field: string) => Promise<string[]>;
   resolve: ResolveDeps;
   maxAttempts: number;
   baseBackoffMs: number;
@@ -88,7 +96,26 @@ export async function expandOnce(deps: ExpansionDeps): Promise<ExpansionResult> 
   }
 
   await completeExpansion(job.id, counts);
+  await suggestIfMissing(job, deps);
   return { kind: "done", job, counts };
+}
+
+/**
+ * Generated here, in the background, so the end card only ever reads storage.
+ * AFTER the expansion is recorded as done, and never allowed to undo that:
+ * suggestions are optional and the field's topics are not, so an LLM failure here
+ * is logged and the field simply has none yet. A later expansion retries, because
+ * `suggestions_at` stays NULL until a list is actually stored.
+ */
+async function suggestIfMissing(job: ExpansionJob, deps: ExpansionDeps): Promise<void> {
+  if (!deps.suggest) return;
+  try {
+    if (await suggestionsGenerated(job.fieldId)) return;
+    const names = await deps.suggest(job.fieldName);
+    await storeSuggestions(job.fieldId, names);
+  } catch (err) {
+    console.warn(`suggestions for ${job.fieldName} not generated: ${describe(err)}`);
+  }
 }
 
 /**
@@ -125,8 +152,10 @@ export async function runExpansionWorker(
   }
 }
 
-export function productionExpansionDeps(resolve: ResolveDeps): Pick<ExpansionDeps, "generate" | "resolve"> {
-  return { generate: generateCandidates, resolve };
+export function productionExpansionDeps(
+  resolve: ResolveDeps,
+): Pick<ExpansionDeps, "generate" | "resolve" | "suggest"> {
+  return { generate: generateCandidates, resolve, suggest: suggestAdjacentFields };
 }
 
 function describe(err: unknown): string {

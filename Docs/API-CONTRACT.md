@@ -114,7 +114,9 @@ When `exhausted` is `true`, `end_card` is populated and `scrolls` is empty.
 }
 ```
 
-`source` distinguishes the two kinds of suggestion and the client **must** render them differently. `overlap` fields are ranked by shared topics and already have content. `suggested` fields come from an LLM when overlap is thin, have `has_content: false`, and tapping one lands the user in a full cold start — which is fine, but should not be a surprise.
+`source` distinguishes the two kinds of suggestion and the client **must** render them differently. `overlap` fields are ranked by shared topics and already have content, and come first. `suggested` fields come from an LLM and fill any remaining slots when overlap is thin; they are generated in the background and stored, so they are stable between visits and a field may briefly have none. Tapping a suggested field usually lands the user in a full cold start — which is fine, but should not be a surprise.
+
+**Render `has_content`, not `source`, to decide what tapping will do.** A suggested field usually has `has_content: false` and `id: null`. But the model can suggest a field that already exists and has cards, and then `has_content` is `true` and `id` is set — it is still labelled `suggested` because that is where the suggestion came from. *(Clarified 2026-09-17.)*
 
 The feed never silently loops. Continuing is always one of the three actions below.
 

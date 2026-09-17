@@ -33,6 +33,7 @@ Living document. Updated at the end of every working session, as part of the wor
 ├── .gitignore
 ├── .github/workflows/ci.yml           typecheck+test serving, ruff+pytest pipeline, migrate-twice on real Postgres
 ├── prompts/
+│   ├── adjacent-fields.md             field -> up to 5 related field names; specific, not a whole discipline (5.7)
 │   ├── candidate-topics.md            field -> [{name, description}]; the description format is load-bearing (invariant 9)
 │   ├── data-generation.md             supplementary material + self-reported confidence
 │   ├── card-generation.md             2-4 cards per topic; scrape is grounding, never copied (P1)
@@ -42,7 +43,7 @@ Living document. Updated at the end of every working session, as part of the wor
 ├── services/
 │   ├── serving/                       Node 22 + Express + TS
 │   │   ├── package.json, tsconfig.json, .dockerignore, vitest.config.ts
-│   │   ├── tests/                     global-setup.ts (builds a fresh test DB) · helpers.ts · feed.test.ts · account.test.ts · resolve.test.ts (the lock proven able to fail, P35) · expansion.test.ts (job lifecycle) · reuse.test.ts (**5.5, the reuse proof**) · expand.test.ts (5.6, the exhaustion signal) · fakes.ts (Qdrant + embeddings stand-ins; CI has neither)
+│   │   ├── tests/                     global-setup.ts (builds a fresh test DB) · helpers.ts · feed.test.ts · account.test.ts · resolve.test.ts (the lock proven able to fail, P35) · expansion.test.ts (job lifecycle) · reuse.test.ts (**5.5, the reuse proof**) · expand.test.ts (5.6, the exhaustion signal) · adjacent.test.ts (5.7) · fakes.ts (Qdrant + embeddings stand-ins; CI has neither)
 │   │   ├── calibration/               the W3 evidence: candidates.json (156 over 8 fields) · labels.json (44 pairs, each with a `why`) · sweep-<model>.json, one per swept model
 │   │   ├── Dockerfile                 migrate, then serve: `node dist/db/migrate.js && exec node dist/index.js`
 │   │   └── src/
@@ -79,7 +80,8 @@ Living document. Updated at the end of every working session, as part of the wor
 │   │               ├── 008_unsourced_resolved.sql resolved_at — a stale diagnostic is worse than none
 │   │               ├── 009_topic_claim.sql    claimed_at — a pending topic IS the pipeline's job; the claim doubles as backoff
 │   │               ├── 010_field_expansion.sql candidate generation as a job; at most one initial expansion per field, ever
-│   │               └── 011_expansion_result.sql failed_retried + linked_existing — what a "more topics" tap achieved
+│   │               ├── 011_expansion_result.sql failed_retried + linked_existing — what a "more topics" tap achieved
+│   │               └── 012_field_suggestion.sql stored LLM field suggestions + field.suggestions_at
 │   ├── pipeline/                      Python 3.12 + FastAPI
 │   │   ├── pyproject.toml, Dockerfile, .dockerignore
 │   │   ├── app/main.py                FastAPI app; GET /health only so far
@@ -189,6 +191,7 @@ Grouped in dependency order: data layer first, then the paths that depend on it.
 | Feature | Status | What it does | Lives in | Star |
 |---|---|---|---|---|
 | Feed Orchestrator | `Building` | Handles a field request end to end. **A first request enqueues the field's expansion and returns at once** — measured live at **224ms**, versus the 32–54s candidate generation it no longer waits for. An owed expansion counts toward `generating`, fixing a bug the design would otherwise have shipped: a brand-new field has no topics while candidates are produced, and would have reported `exhausted` and shown the end card. Still to come: the miss path's pipeline worker (5.4) and the acceptance test (5.5). | `src/feed/feedService.ts`, `src/repo/feed.ts` | |
+| Adjacent-field suggestions (task 5.7) | `Done` | When a field shares few topics, its end card is filled out with related fields an LLM suggested. **Generated in the background after an expansion and stored** — a suggestion call measured 8s idle and 57s while the pipeline runs, too slow for the request a user sees on finishing a field, and three identical calls gave three different lists. Overlap fields first, suggestions in the free slots; the field itself and duplicates are dropped; a suggestion naming a field that already has cards is reported *with* content. Suggesting can never fail the expansion it follows. | `src/topics/adjacent.ts` · `src/repo/fields.ts` · `prompts/adjacent-fields.md` · migration `012` | |
 | "More topics" (task 5.6) | `Done` | `POST /v1/fields/{id}/expand` returns `202` at once: re-queues the field's failed topics and queues a `more` expansion whose candidates exclude what the field already has. Repeated taps do not stack. What it achieved arrives on the feed as `last_expansion` — topics queued, existing topics newly linked, failed retried — and **all three at zero is the exhaustion signal**. The linked count exists because a field can gain cards without generating anything; a re-proposed topic the field already had is not counted, or the action would be offered forever. | `src/feed/feedService.ts` · `src/expansion/queue.ts` · `tests/expand.test.ts` · migration `011` | ★ |
 | Reuse proof (task 5.5) | `Done` | **The acceptance test for the whole design.** Field A, then overlapping field B, through the real feed API, expansion queue, resolver and Postgres: the shared topic is generated **once**, gains **one** new `Field_Topic` row, and serves **identical scroll IDs** under both. Seen failing with reuse disabled; that control caught the test counting generations on the wrong row, now fixed. | `tests/reuse.test.ts` | ★★★ |
 | Field expansion worker | `Done` (W5) | A job table plus a worker inside serving: claims a field's expansion, generates candidates, resolves each one. **Verified live on the rebuilt container:** `Java Data Structures` → 20 candidates, 1 reused, 19 created, 0 errors, 54.4s, first attempt. Two guards keep polling from re-running it (P16 one level up): an initial expansion is enqueued **at most once per field**, and **never for a field that already has topics**. Bounded retry with backoff, then failed; a reaper recovers an expansion whose worker died; partial resolve failures finish the job rather than regenerating 32–54s of LLM output. Every guarantee here was **seen failing with its mechanism removed** before being trusted (P35). | `src/expansion/queue.ts` · `src/expansion/worker.ts` · migration `010` | ★★ |
@@ -325,7 +328,7 @@ The numbers this section should carry next, once W2–W5 land:
 | Live cards re-verified after P33 | Every live scroll re-checked against a fresh scrape by the fixed gate | **12/12 passed, 0 retired**; `measurements/recheck-20260916-095034.json`. The blind period produced no bad cards — unknowable until the gate could see |
 | Fact-check cost per card | Model calls per verdict | **1** where the source fits one window. **Up to 11** on a 32k-char source — a pass must rule out a contradiction in *every* excerpt (132s); a rejection short-circuits at the first one (17s) |
 | Topics with zero surviving cards | Count of topics where every draft failed | **0 of 6** |
-| Test count and pass rate | CI output | Locally: **120 passed + 1 xfailed** (pipeline), **60 passed** (serving — 37 added in W5 so far); pipeline now **149 passed + 1 xfailed**. **In CI: green**, as of run 5 (`dd8878e`) — the **first passing run in the project's history**, after 4 consecutive failures (P34). `pipeline` went green from run 3 once the editable-install fix landed; `serving` had failed `npm test` on every run because its CI job had no database |
+| Test count and pass rate | CI output | Locally: **120 passed + 1 xfailed** (pipeline), **71 passed** (serving — 48 added in W5); pipeline now **149 passed + 1 xfailed**. **In CI: green**, as of run 5 (`dd8878e`) — the **first passing run in the project's history**, after 4 consecutive failures (P34). `pipeline` went green from run 3 once the editable-install fix landed; `serving` had failed `npm test` on every run because its CI job had no database |
 
 The two external figures quoted in [BUILD-PLAN.md](BUILD-PLAN.md) — EKS ~$0.10/hr control-plane fee, GKE $74.40/month credit — come from a pricing check made during planning, not from this project's own billing. They are vendor pricing and should be re-checked before the GKE decision is acted on.
 
