@@ -9,6 +9,7 @@ import {
 import { adjacentFields, findOrCreateField, type Field } from "../repo/fields.js";
 import {
   failedTopics,
+  fieldProgress,
   pendingTopicCount,
   revisionPage,
   unviewedPage,
@@ -39,12 +40,13 @@ export async function buildFeedPage(
   // which is what stops polling from re-running candidate generation (P16).
   await enqueueInitialExpansion(field.id);
 
-  const [scrolls, pending, failed, expanding, lastExpansion] = await Promise.all([
+  const [scrolls, pending, failed, expanding, lastExpansion, progress] = await Promise.all([
     unviewedPage(field.id, accountId, limit),
     pendingTopicCount(field.id),
     failedTopics(field.id),
     openExpansionExists(field.id),
     latestExpansion(field.id),
+    fieldProgress(field.id, accountId),
   ]);
 
   // An expansion still owed counts as generating. Without it, a brand-new field
@@ -64,6 +66,7 @@ export async function buildFeedPage(
     exhausted,
     end_card: null,
     last_expansion: lastExpansion,
+    progress,
   };
 
   if (generating) page.retry_after_ms = config.retryAfterMs;
@@ -91,10 +94,11 @@ export async function buildRevisionPage(
   limit: number,
 ): Promise<FeedPage> {
   const field: Field = await findOrCreateField(fieldName);
-  const [scrolls, failed, lastExpansion] = await Promise.all([
+  const [scrolls, failed, lastExpansion, progress] = await Promise.all([
     revisionPage(field.id, accountId, limit),
     failedTopics(field.id),
     latestExpansion(field.id),
+    fieldProgress(field.id, accountId),
   ]);
 
   return {
@@ -106,6 +110,7 @@ export async function buildRevisionPage(
     exhausted: false,
     end_card: null,
     last_expansion: lastExpansion,
+    progress,
   };
 }
 

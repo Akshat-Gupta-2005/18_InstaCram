@@ -47,6 +47,17 @@ export interface FeedPage {
    * client should stop offering the action.
    */
   last_expansion: LastExpansion | null;
+  /**
+   * The user's place in the whole field: `viewed` of the `total` cards it can
+   * serve. `total` grows while the field generates. Lets a client number cards
+   * across visits ("card 64 of 91") rather than within one page.
+   */
+  progress: FieldProgress;
+}
+
+export interface FieldProgress {
+  viewed: number;
+  total: number;
 }
 
 export interface LastExpansion {

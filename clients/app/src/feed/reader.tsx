@@ -55,7 +55,11 @@ export function Reader({
   });
   const cardId = card?.id ?? null;
   const wasAtEnd = useRef(false);
+  const { focused } = feed;
   useEffect(() => {
+    // Hidden behind another screen: nothing here is being read. Coming back re-runs
+    // this, and use-feed ignores a card already counted.
+    if (!focused) return;
     if (cardId === null) {
       handlers.current.onDisplayed(index, null);
       if (!wasAtEnd.current) handlers.current.onReachedEnd();
@@ -68,13 +72,13 @@ export function Reader({
       if (shown) handlers.current.onDisplayed(index, shown);
     }, DISPLAY_THRESHOLD_MS);
     return () => clearTimeout(timer);
-  }, [index, cardId]);
+  }, [index, cardId, focused]);
 
   // Keyboard, on the web. Ignored while typing, and with modifier keys held, so
   // browser shortcuts keep working.
-  const keyState = useRef({ total, card, index });
+  const keyState = useRef({ total, card, index, focused });
   useEffect(() => {
-    keyState.current = { total, card, index };
+    keyState.current = { total, card, index, focused };
   });
   useEffect(() => {
     if (Platform.OS !== "web") return;
@@ -83,6 +87,9 @@ export function Reader({
       if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const s = keyState.current;
+      // The listener is on the document, so a reader hidden in the stack hears
+      // every key too. Only the one on screen may act.
+      if (!s.focused) return;
       switch (e.key) {
         case "j":
         case "ArrowDown":
@@ -108,7 +115,9 @@ export function Reader({
           }
           break;
         case "Escape":
-          router.push("/");
+          // Back to the Home already underneath, not a new one on top: pushing
+          // stacked a screen per trip and kept every reader below it mounted.
+          router.dismissTo("/");
           break;
       }
     }
@@ -117,14 +126,22 @@ export function Reader({
   }, [router]);
 
   const verifiedCount = cards.filter((x) => x.trust_label === "sourced_verified").length;
-  const remaining = Math.max(total - index - 1, 0);
   const generating = !!page?.generating;
 
-  useShellInfo({
-    crumbs: [fieldName, atEnd ? (page?.exhausted ? "End of field" : "Up next") : `Card ${pad(index + 1)} of ${pad(total)}`],
+  // Numbering. Learning numbers cards across the whole field, continuing from the
+  // cards seen on earlier visits; revision re-reads seen cards, so it numbers
+  // within the cards in hand. `total` above stays the in-hand count, for moving.
+  const inField = mode === "learn";
+  const offset = inField ? feed.seenBefore : 0;
+  const deckTotal = inField ? Math.max(page?.progress?.total ?? 0, offset + total) : total;
+  const number = Math.min(offset + index + 1, deckTotal);
+  const remaining = Math.max(deckTotal - number, 0);
+
+  useShellInfo(!focused ? null : {
+    crumbs: [fieldName, atEnd ? (page?.exhausted ? "End of field" : "Up next") : `Card ${pad(number)} of ${pad(deckTotal)}`],
     mode,
     field: page?.field.name,
-    deck: { position: Math.min(index + 1, total), total, generating },
+    deck: { position: number, total: deckTotal, generating },
     pending: page?.topics_pending,
   });
 
@@ -147,20 +164,20 @@ export function Reader({
                 {mode === "revision" ? "Revision track" : "Field track"} · {fieldName}
               </Label>
               <Text style={[Type.ui, { color: c.textSecondary, fontSize: 13 }]}>
-                {total === 0
+                {deckTotal === 0
                   ? generating
                     ? "Cards on the way"
                     : "No cards yet"
                   : atEnd
-                    ? `All ${total} cards read`
-                    : `Card ${pad(index + 1)} of ${pad(total)} · ${remaining} remaining${generating ? " · more on the way" : ""}`}
+                    ? `All ${deckTotal} cards read`
+                    : `Card ${pad(number)} of ${pad(deckTotal)} · ${remaining} remaining${generating ? " · more on the way" : ""}`}
               </Text>
             </View>
             <View style={[styles.track, { backgroundColor: c.border }]}>
               <View
                 style={[
                   styles.trackFill,
-                  { backgroundColor: c.accent, width: `${total === 0 ? 0 : (Math.min(index + 1, total) / total) * 100}%` },
+                  { backgroundColor: c.accent, width: `${deckTotal === 0 ? 0 : ((atEnd ? deckTotal : number) / deckTotal) * 100}%` },
                 ]}
               />
             </View>
@@ -181,7 +198,7 @@ export function Reader({
           {prev ? (
             <Pressable onPress={() => setIndex(index - 1)} style={[styles.peek, styles.peekTop, { backgroundColor: c.rail, borderColor: c.border }]}>
               <Text style={{ color: c.textFaint }}>↑</Text>
-              <Label tone="faint">Card {pad(index)}</Label>
+              <Label tone="faint">Card {pad(offset + index)}</Label>
               <Text style={[Type.bodySmall, { color: c.textFaint, fontSize: 18 }]} numberOfLines={1}>
                 {prev.topic.name}
               </Text>
@@ -218,7 +235,7 @@ export function Reader({
             (next ? (
               <Pressable onPress={() => setIndex(index + 1)} style={[styles.peek, styles.peekBottom, { backgroundColor: c.rail, borderColor: c.border }]}>
                 <Text style={{ color: c.textFaint }}>↓</Text>
-                <Label tone="faint">Card {pad(index + 2)}</Label>
+                <Label tone="faint">Card {pad(offset + index + 2)}</Label>
                 <Text style={[Type.bodySmall, { color: c.textFaint, fontSize: 18, flex: 1 }]} numberOfLines={1}>
                   {next.topic.name}
                 </Text>

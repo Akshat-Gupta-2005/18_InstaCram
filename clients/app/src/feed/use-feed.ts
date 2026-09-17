@@ -14,6 +14,7 @@
  * Paging has no cursor, so a page can return cards already in hand - ones fetched
  * but not yet displayed, and therefore not yet viewed. They are de-duplicated by id.
  */
+import { useIsFocused } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Platform } from "react-native";
 
@@ -39,6 +40,15 @@ const FLUSH_EVERY_MS = 5000;
 
 export function useFeed(field: string, mode: FeedMode) {
   const { api } = useSession();
+  /**
+   * A stack navigator keeps screens you have navigated away from mounted, hidden.
+   * An unfocused feed must not log views: its "current card" is not on anyone's
+   * screen. (Hidden readers kept logging - and kept obeying J - which marked cards
+   * seen that were never shown.)
+   */
+  const focused = useIsFocused();
+  const focusedRef = useRef(focused);
+  focusedRef.current = focused;
 
   const [cards, setCards] = useState<ScrollCard[]>([]);
   const [page, setPage] = useState<FeedPage | null>(null);
@@ -46,6 +56,12 @@ export function useFeed(field: string, mode: FeedMode) {
   const [loading, setLoading] = useState(false);
   /** Index of the item on screen; cards.length means the footer (waiting/end card). */
   const [position, setPosition] = useState(0);
+  /**
+   * Cards in this field seen before this visit. The first card in hand is the
+   * field's card seenBefore + 1, so numbering continues across visits
+   * ("card 64 of 91") instead of restarting at 1.
+   */
+  const [seenBefore, setSeenBefore] = useState(0);
 
   const inHand = useRef(new Set<string>());
   const displayed = useRef(new Set<string>());
@@ -80,6 +96,9 @@ export function useFeed(field: string, mode: FeedMode) {
     try {
       // Views first, so the server does not hand back cards already shown.
       await flushViews();
+      // Cards this visit has already had counted by the server. Taken before the
+      // request, so a card displayed while it is in flight does not shift the base.
+      const countedThisVisit = displayed.current.size - pendingViews.current.length;
       const res = await api<FeedPage>(mode === "revision" ? "/v1/feed/revision" : "/v1/feed", {
         method: "POST",
         body: { field, limit: PAGE_SIZE },
@@ -88,6 +107,7 @@ export function useFeed(field: string, mode: FeedMode) {
       for (const s of fresh) inHand.current.add(s.id);
       if (fresh.length > 0) setCards((current) => [...current, ...fresh]);
       setPage(res);
+      setSeenBefore(Math.max(res.progress.viewed - countedThisVisit, 0));
       setError(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't load cards.");
@@ -138,7 +158,7 @@ export function useFeed(field: string, mode: FeedMode) {
 
   // Prefetch near the end of what is in hand; poll while the field is generating.
   useEffect(() => {
-    if (!page || page.exhausted) return;
+    if (!page || page.exhausted || !focused) return;
     const remaining = cards.length - position;
     if (remaining > PREFETCH_REMAINING) return;
 
@@ -154,7 +174,7 @@ export function useFeed(field: string, mode: FeedMode) {
     if (lastLoadAt.current === key) return;
     lastLoadAt.current = key;
     void load();
-  }, [page, cards.length, position, load]);
+  }, [page, cards.length, position, load, focused]);
 
   /**
    * Called as items come on screen, with the card itself (null for the footer).
@@ -170,7 +190,7 @@ export function useFeed(field: string, mode: FeedMode) {
   const onDisplayed = useCallback(
     (index: number, card: ScrollCard | null) => {
       setPosition(index);
-      if (!card) return;
+      if (!card || !focusedRef.current) return;
       // Once per card per visit to the screen. Coming back to a card while
       // scrolling is not a new impression.
       if (displayed.current.has(card.id)) return;
@@ -213,7 +233,7 @@ export function useFeed(field: string, mode: FeedMode) {
     return res;
   }, [api, page]);
 
-  return { cards, page, error, loading, position, onDisplayed, onReachedEnd, toggleSave, expand, reload: load };
+  return { cards, page, error, loading, position, seenBefore, focused, onDisplayed, onReachedEnd, toggleSave, expand, reload: load };
 }
 
 /**

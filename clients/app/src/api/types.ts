@@ -51,6 +51,8 @@ export interface FeedPage {
   exhausted: boolean;
   end_card: EndCard | null;
   last_expansion: LastExpansion | null;
+  /** The user's place in the whole field; `total` grows while it generates. */
+  progress: { viewed: number; total: number };
 }
 
 export interface ExpandResponse {

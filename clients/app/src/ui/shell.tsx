@@ -103,7 +103,7 @@ function Sidebar() {
 
   return (
     <View style={[styles.sidebar, { backgroundColor: c.rail, borderRightColor: c.border }]}>
-      <Pressable onPress={() => router.push("/")} style={styles.brand}>
+      <Pressable onPress={() => router.dismissTo("/")} style={styles.brand}>
         <View style={[styles.brandMark, { borderColor: c.accent }]}>
           <Text style={{ color: c.accent, fontSize: 11, fontFamily: Fonts.sansSemiBold }}>≡</Text>
         </View>
@@ -120,7 +120,9 @@ function Sidebar() {
         disabled={!field}
         onPress={() => field && router.push({ pathname: "/feed/[field]", params: { field } })}
       />
-      <RailItem label="Fields" active={pathname === "/"} onPress={() => router.push("/")} />
+      {/* Back to the Home underneath rather than a new one on top: pushing stacked
+          a screen per trip, and every feed left below stayed mounted. */}
+      <RailItem label="Fields" active={pathname === "/"} onPress={() => router.dismissTo("/")} />
       <RailItem
         label="Saved cards"
         count={savedCount === null ? undefined : String(savedCount)}

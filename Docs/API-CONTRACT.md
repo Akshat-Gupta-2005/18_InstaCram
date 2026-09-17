@@ -68,7 +68,8 @@ The main endpoint. Returns the next page of scrolls the user has not yet viewed 
   "retry_after_ms": 3000,
   "failed_topics": [ { "id": "c91d…", "name": "ConcurrentSkipListMap" } ],
   "exhausted": false,
-  "end_card": null
+  "end_card": null,
+  "progress": { "viewed": 63, "total": 91 }
 }
 ```
 
@@ -79,6 +80,7 @@ The main endpoint. Returns the next page of scrolls the user has not yet viewed 
 | `topics_pending` | Topics still in the pipeline. Drives a ready-count in the waiting state — never shown before the user exhausts the cards already in hand. |
 | `retry_after_ms` | Server-dictated poll cadence. Absent when `generating` is false. |
 | `exhausted` | No unviewed scrolls remain. See §4. |
+| `progress` | The user's place in the whole field: `viewed` of the `total` cards this field can serve (live cards of ready topics). `total` grows while the field generates. Lets the client number cards across visits — the first card of a learning page is card `viewed + 1` — instead of restarting at 1. Present on revision pages too. *(Added 2026-09-17.)* |
 | `failed_topics` | Topics in this field whose last generation run produced no card that passed fact-check. **Tell the user** — "couldn't load verified cards for ConcurrentSkipListMap" — rather than silently omitting the topic. It is dropped for this run, and paging or polling never retries it. It is retried on the field's **next generation run**, which is the next "more topics" tap (§4), or sooner if another field's candidate generation proposes it. While that retry runs, it appears under `topics_pending`. Empty array when nothing failed. |
 
 **Paging has no cursor.** "The next page" means "scrolls this user has not viewed", so successive calls advance as views are logged. A field gaining new topics mid-session cannot invalidate a position that does not exist.

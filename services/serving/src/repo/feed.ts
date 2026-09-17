@@ -115,6 +115,29 @@ export async function failedTopics(fieldId: string): Promise<FailedTopic[]> {
   return rows;
 }
 
+/**
+ * How far through the field this user is: of the cards a feed could serve (live,
+ * ready topic - the same population as `unviewedPage`), how many they have seen.
+ * Counted over that one population so `viewed` can never exceed `total`; a
+ * retired card someone saw leaves both.
+ */
+export async function fieldProgress(
+  fieldId: string,
+  accountId: string,
+): Promise<{ viewed: number; total: number }> {
+  const { rows } = await pool.query<{ viewed: number; total: number }>(
+    `SELECT count(*)::int AS total,
+            count(*) FILTER (WHERE EXISTS (SELECT 1 FROM user_view uv
+                                           WHERE uv.user_id = $2 AND uv.scroll_id = s.id))::int AS viewed
+     FROM live_scroll s
+     JOIN topic t ON t.id = s.topic_id
+     JOIN field_topic ft ON ft.topic_id = t.id
+     WHERE ft.field_id = $1 AND t.status = 'ready'`,
+    [fieldId, accountId],
+  );
+  return rows[0] ?? { viewed: 0, total: 0 };
+}
+
 /** Distinct cards this user has seen in this field, for the end-of-field card. */
 export async function viewedCountInField(fieldId: string, accountId: string): Promise<number> {
   const { rows } = await pool.query<{ seen: number }>(

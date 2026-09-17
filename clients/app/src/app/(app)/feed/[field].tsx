@@ -22,7 +22,7 @@ export default function FeedScreen() {
   // On wide screens the Reader reports its own, richer description (card number,
   // deck position); reporting here too would overwrite it, because a parent's
   // effects run after its children's.
-  useShellInfo(wide ? null : { crumbs: [title], mode, field: feed.page?.field.name, pending: feed.page?.topics_pending });
+  useShellInfo(wide || !feed.focused ? null : { crumbs: [title], mode, field: feed.page?.field.name, pending: feed.page?.topics_pending });
 
   return (
     <>

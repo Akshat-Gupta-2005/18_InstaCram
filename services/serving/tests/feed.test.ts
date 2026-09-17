@@ -113,6 +113,24 @@ describe("paging by view exclusion", () => {
   });
 });
 
+describe("progress through a field", () => {
+  it("counts seen cards out of the cards the feed can serve, per user", async () => {
+    // Java Utils serves 5 live cards; a 6th is retired. Seeing the retired one
+    // must not count, or `viewed` could pass `total` ("card 7 of 5").
+    const alice = client(base, "alice");
+    const first = await alice.feed("Java Utils", 2);
+    expect(first.body.progress).toEqual({ viewed: 0, total: 5 });
+
+    await display(alice, first.body);
+    await alice.view([{ scroll_id: ids.retiredScrollId }]);
+
+    const next = await alice.feed("Java Utils", 2);
+    expect(next.body.progress).toEqual({ viewed: 2, total: 5 });
+    expect((await alice.revision("Java Utils")).body.progress).toEqual({ viewed: 2, total: 5 });
+    expect((await client(base, "bob").feed("Java Utils")).body.progress).toEqual({ viewed: 0, total: 5 });
+  });
+});
+
 describe("the end of a field", () => {
   it("offers a count and adjacent fields instead of looping", async () => {
     const api = client(base, "alice");
