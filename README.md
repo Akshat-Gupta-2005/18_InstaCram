@@ -39,7 +39,7 @@ cd services/pipeline && pip install -e ".[dev]" && uvicorn app.main:app --reload
 
 Cache-then-generate. A field request is turned into candidate topic names by an LLM; each is checked against a vector database of existing topics. A match reuses the existing content under the new field at zero cost — topics are not owned by fields, which is what makes that possible. A miss triggers the generation pipeline: scrape for grounding, generate supplementary material, write draft cards, fact-check them. Failures are quarantined; passes are served as soon as they are ready.
 
-[Docs/BUILD-PLAN.md](Docs/BUILD-PLAN.md) §2 has the architecture. [Docs/architecture-diagram.html](Docs/architecture-diagram.html) is the original planning-stage diagram. It predates the outbox, quarantine, retry and saves changes, so where the two differ, BUILD-PLAN is authoritative.
+[Docs/BUILD-PLAN.md](Docs/BUILD-PLAN.md) §2 has the architecture. [Docs/architecture-diagram2.html](Docs/architecture-diagram2.html) draws the system as built, and its last section lists what changed since the v1 planning diagram ([Docs/architecture-diagram.html](Docs/architecture-diagram.html), kept for the record — it predates the outbox, quarantine, job queues, retirement and the client).
 
 ## Documentation
 
@@ -48,7 +48,8 @@ Cache-then-generate. A field request is turned into candidate topic names by an 
 | [Docs/BUILD-PLAN.md](Docs/BUILD-PLAN.md) | Intent: stack, architecture, data model, core logic, phases |
 | [Docs/FEATURES.md](Docs/FEATURES.md) | What is true right now — start here |
 | [Docs/SYSTEM-GUIDE.md](Docs/SYSTEM-GUIDE.md) | The running system: every container, how they link, how the database is built and kept honest, what each failure looks like |
-| [Docs/uml/](Docs/uml/) | The same system in 24 diagrams — context, containers, deployment, components, ER, sequences, state machines, decision flows |
+| [Docs/architecture-diagram2.html](Docs/architecture-diagram2.html) | **One page, open it in a browser:** the master architecture diagram plus all 24 UML diagrams in sections |
+| [Docs/uml/](Docs/uml/) | The same 24 diagrams as Markdown, for editing and diffing — context, containers, deployment, components, ER, sequences, state machines, decision flows |
 | [Docs/DECISIONS.md](Docs/DECISIONS.md) | Why it is this way. Append-only, including the reversals |
 | [Docs/IMPLEMENTATION-PLAN.md](Docs/IMPLEMENTATION-PLAN.md) | Build order, W0–W7 |
 | [Docs/API-CONTRACT.md](Docs/API-CONTRACT.md) | The contract both clients build against |

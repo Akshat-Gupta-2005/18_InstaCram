@@ -2,6 +2,8 @@
 
 The system drawn from six angles, high level down to individual decisions. Every diagram is **Mermaid inside Markdown**, so it renders on GitHub and stays editable as text — no image to regenerate when the code moves.
 
+**Prefer one page in a browser?** [../architecture-diagram2.html](../architecture-diagram2.html) holds the master architecture diagram plus every diagram below, in sections, needing nothing installed.
+
 **To view them:** GitHub renders these in the browser. In VS Code, the built-in Markdown preview renders Mermaid, or use the *Markdown Preview Mermaid Support* extension. Nothing needs installing to *edit* them.
 
 ## Which diagram answers which question

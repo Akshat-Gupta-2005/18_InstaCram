@@ -1,0 +1,1716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>InstaCram — System Architecture (v2, as built)</title>
+<style>
+  :root{
+    --bg:#0B1220;
+    --panel:#0F1A2E;
+    --card:#151F35;
+    --card-border:#22304C;
+    --text:#E2E8F0;
+    --text-dim:#8B9BB4;
+    --mono: ui-monospace, "Cascadia Code", "SFMono-Regular", Menlo, Consolas, monospace;
+    --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+    --client:#2DD4BF;
+    --serving:#818CF8;
+    --pipeline:#A78BFA;
+    --decision:#FBBF24;
+    --success:#34D399;
+    --agent:#F59E0B;
+    --scraper:#FB923C;
+    --fail:#F87171;
+    --reldb:#10B981;
+    --vecdb:#A78BFA;
+    --infra:#94A3B8;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);padding:36px 40px 80px;}
+  h1{font-family:var(--mono);font-size:21px;letter-spacing:0.4px;margin:0 0 6px 0;color:#F8FAFC;font-weight:600;}
+  .subtitle{color:var(--text-dim);font-size:13px;margin-bottom:22px;max-width:1150px;line-height:1.6;}
+  .subtitle b{color:#CBD5E1;}
+  code{font-family:var(--mono);font-size:0.92em;color:#CBD5E1;background:rgba(148,163,184,0.12);padding:1px 5px;border-radius:4px;}
+
+  /* ---------- navigation ---------- */
+  nav{position:sticky;top:0;z-index:50;background:rgba(11,18,32,0.93);backdrop-filter:blur(8px);
+      border:1px solid var(--card-border);border-radius:10px;padding:12px 16px;margin-bottom:26px;
+      display:flex;flex-wrap:wrap;gap:8px 18px;font-family:var(--mono);font-size:11px;}
+  nav a{color:#A5B4FC;text-decoration:none;white-space:nowrap;}
+  nav a:hover{color:#F8FAFC;text-decoration:underline;}
+  nav .nav-title{color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;}
+
+  /* ---------- sections ---------- */
+  section{margin:0 0 52px 0;scroll-margin-top:80px;}
+  h2{font-family:var(--mono);font-size:15px;letter-spacing:0.6px;color:#F8FAFC;margin:0 0 4px 0;
+     padding-bottom:8px;border-bottom:1px solid var(--card-border);}
+  h2 .num{color:var(--serving);margin-right:10px;}
+  .section-intro{color:var(--text-dim);font-size:12.5px;line-height:1.6;margin:10px 0 22px 0;max-width:1100px;}
+  h3.diagram-title{font-family:var(--mono);font-size:12.5px;color:#CBD5E1;margin:26px 0 8px 0;font-weight:700;}
+  h3.diagram-title span{color:var(--text-dim);font-weight:400;}
+
+  .note{border-left:3px solid var(--decision);background:rgba(251,191,36,0.06);padding:11px 15px;
+        border-radius:0 8px 8px 0;font-size:12.5px;line-height:1.65;color:#CBD5E1;margin:12px 0 0 0;max-width:1100px;}
+  .note.bug{border-left-color:var(--fail);background:rgba(248,113,113,0.07);}
+  .note.key{border-left-color:var(--success);background:rgba(52,211,153,0.06);}
+  .note b{color:#F8FAFC;}
+
+  table{border-collapse:collapse;margin:16px 0 0 0;font-size:12.2px;max-width:1100px;width:100%;}
+  th,td{border:1px solid var(--card-border);padding:8px 11px;text-align:left;vertical-align:top;line-height:1.5;}
+  th{background:var(--panel);color:#CBD5E1;font-family:var(--mono);font-size:10.5px;
+     text-transform:uppercase;letter-spacing:0.7px;font-weight:700;}
+  td{color:#9FB0C8;}
+  td b{color:#E2E8F0;}
+
+  /* ---------- mermaid host ---------- */
+  .diagram{background:var(--panel);border:1px solid var(--card-border);border-radius:10px;
+           padding:18px;overflow-x:auto;}
+  .diagram svg{max-width:100%;height:auto;display:block;margin:0 auto;}
+  .diagram pre{color:#8B9BB4;font-family:var(--mono);font-size:11px;white-space:pre;margin:0;}
+  .fallback{color:var(--fail);font-family:var(--mono);font-size:11px;margin-bottom:8px;}
+
+  /* ---------- hand-laid hero diagram (no JS, always renders) ---------- */
+  .legend{display:flex;flex-wrap:wrap;gap:10px 26px;padding:16px 20px;background:var(--panel);
+          border:1px solid var(--card-border);border-radius:10px;margin-bottom:22px;font-size:12px;}
+  .legend-title{width:100%;font-family:var(--mono);font-size:10px;letter-spacing:1px;
+                text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;}
+  .legend-item{display:flex;align-items:center;gap:7px;color:#CBD5E1;white-space:nowrap;}
+  .swatch{width:11px;height:11px;border-radius:3px;flex-shrink:0;}
+  .line-swatch{width:24px;height:0;border-top:2.5px solid;flex-shrink:0;}
+  .dashed{border-top-style:dashed;}
+
+  .canvas-wrap{overflow-x:auto;border-radius:12px;}
+  .canvas{position:relative;width:1760px;height:1930px;}
+  .band{position:absolute;border-radius:16px;border:1.5px dashed;background:rgba(255,255,255,0.015);}
+  .band-label{position:absolute;font-family:var(--mono);font-size:11px;letter-spacing:1.2px;
+              text-transform:uppercase;font-weight:700;}
+  .box{position:absolute;background:var(--card);border:1px solid var(--card-border);border-left-width:4px;
+       border-radius:9px;padding:11px 14px;box-shadow:0 2px 10px rgba(0,0,0,0.25);}
+  .box h3{font-family:var(--mono);font-size:12.5px;margin:0 0 3px 0;color:#F8FAFC;font-weight:700;line-height:1.3;}
+  .box .tag{font-family:var(--mono);font-size:9px;color:var(--text-dim);text-transform:uppercase;
+            letter-spacing:0.6px;display:block;margin-bottom:6px;}
+  .box p{margin:0;color:#9FB0C8;font-size:11.2px;line-height:1.45;}
+  .box p + p{margin-top:5px;}
+  .box ul{margin:5px 0 0 0;padding-left:14px;color:#9FB0C8;font-size:10.4px;font-family:var(--mono);line-height:1.55;}
+  .box em{color:#CBD5E1;font-style:normal;}
+  .box.client{border-left-color:var(--client);}
+  .box.serving{border-left-color:var(--serving);}
+  .box.pipeline{border-left-color:var(--pipeline);}
+  .box.decision{border-left-color:var(--decision);border-style:dashed;background:#1A1608;}
+  .box.success{border-left-color:var(--success);}
+  .box.agent{border-left-color:var(--agent);}
+  .box.gate{border-left-color:var(--fail);}
+  .box.reldb{border-left-color:var(--reldb);}
+  .box.vecdb{border-left-color:var(--vecdb);}
+  .box.infra{border-left-color:var(--infra);}
+  svg.connectors{position:absolute;top:0;left:0;width:1760px;height:1930px;pointer-events:none;}
+  .edge-label{font-family:var(--mono);font-size:10.5px;font-weight:700;}
+
+  footer{color:var(--text-dim);font-size:12px;border-top:1px solid var(--card-border);
+         padding-top:16px;margin-top:40px;line-height:1.7;max-width:1100px;}
+</style>
+</head>
+<body>
+
+<h1>// instacram — system architecture (v2, as built)</h1>
+<div class="subtitle">
+Field-scoped microlearning cards · cache-then-generate · two services that <b>never call each other</b>.
+This replaces the v1 planning diagram, which predates the outbox, the quarantine, the job queues, the workers, retirement,
+saves-as-rows and the client. Everything drawn here exists and has been run. Where a box carries a
+<b>P-number</b>, it exists because the obvious alternative was built first and failed — the story is in
+<code>Docs/DECISIONS.md</code>. Prose: <code>Docs/SYSTEM-GUIDE.md</code>. Source of these diagrams: <code>Docs/uml/</code>.
+</div>
+
+<nav>
+  <span class="nav-title">Jump to</span>
+  <a href="#hero">0 · Master diagram</a>
+  <a href="#hld">1 · HLD</a>
+  <a href="#lld">2 · LLD</a>
+  <a href="#data">3 · Data model</a>
+  <a href="#seq">4 · Sequences</a>
+  <a href="#state">5 · State machines</a>
+  <a href="#activity">6 · Decision flows</a>
+  <a href="#changed">7 · What changed since v1</a>
+</nav>
+
+<!-- ============================================================ -->
+<!-- 0 — MASTER DIAGRAM                                           -->
+<!-- ============================================================ -->
+<section id="hero">
+<h2><span class="num">00</span>Master diagram — the system as built</h2>
+<div class="section-intro">
+Hand-laid, no JavaScript: this one renders even with no network. The 24 diagrams below zoom into it.
+</div>
+
+<div class="legend">
+  <div class="legend-title">Component types</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--client)"></span>Client</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--serving)"></span>Serving — fast path</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--pipeline)"></span>Pipeline — slow path</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--decision)"></span>The handoff</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--agent)"></span>LLM agent</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--fail)"></span>Quality gate / fail path</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--reldb)"></span>Source of truth</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--vecdb)"></span>Derived store</div>
+  <div class="legend-item"><span class="swatch" style="background:var(--infra)"></span>Cross-cutting</div>
+
+  <div class="legend-title" style="margin-top:6px;">Arrows</div>
+  <div class="legend-item"><span class="line-swatch" style="border-color:#64748B"></span>call / write</div>
+  <div class="legend-item"><span class="line-swatch" style="border-color:#34D399"></span>pass / reuse</div>
+  <div class="legend-item"><span class="line-swatch dashed" style="border-color:#FBBF24"></span>queued, not called</div>
+  <div class="legend-item"><span class="line-swatch" style="border-color:#F87171"></span>rejected</div>
+  <div class="legend-item"><span class="line-swatch dashed" style="border-color:#A78BFA"></span>vector read / write</div>
+  <div class="legend-item"><span class="line-swatch dashed" style="border-color:#2DD4BF"></span>read / sync</div>
+</div>
+
+<div class="canvas-wrap">
+<div class="canvas">
+
+  <svg class="connectors" viewBox="0 0 1760 1930">
+    <defs>
+      <marker id="m-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#64748B"/></marker>
+      <marker id="m-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#34D399"/></marker>
+      <marker id="m-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#FBBF24"/></marker>
+      <marker id="m-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#F87171"/></marker>
+      <marker id="m-violet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#A78BFA"/></marker>
+      <marker id="m-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2DD4BF"/></marker>
+    </defs>
+
+    <!-- app -> routes -->
+    <path d="M850,120 L850,150 L255,150 L255,210" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+    <text class="edge-label" x="600" y="142" fill="#94A3B8">bearer token, every request</text>
+
+    <!-- routes -> feed orchestrator -->
+    <path d="M440,300 L470,300" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+    <!-- feed orchestrator -> expansion worker (ENQUEUE, not call) -->
+    <path d="M840,300 L870,300" stroke="#FBBF24" stroke-width="2.6" stroke-dasharray="6,5" fill="none" marker-end="url(#m-amber)"/>
+    <text class="edge-label" x="792" y="286" fill="#FBBF24">enqueue</text>
+    <!-- expansion worker -> resolver -->
+    <path d="M1240,300 L1270,300" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+
+    <!-- resolver -> handoff (MISS) -->
+    <path d="M1360,400 L1360,432 L850,432 L850,462" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+    <text class="edge-label" x="880" y="424" fill="#94A3B8">MISS → insert topic(pending) + outbox, one txn</text>
+
+    <!-- resolver -> reuse (MATCH) -->
+    <path d="M1560,400 L1560,462" stroke="#34D399" stroke-width="2.6" fill="none" marker-end="url(#m-green)"/>
+    <text class="edge-label" x="1572" y="436" fill="#34D399">MATCH</text>
+
+    <!-- handoff -> topic worker -->
+    <path d="M850,542 L850,572 L240,572 L240,612" stroke="#FBBF24" stroke-width="2.6" stroke-dasharray="6,5" fill="none" marker-end="url(#m-amber)"/>
+    <text class="edge-label" x="330" y="564" fill="#FBBF24">claimed, never called</text>
+
+    <!-- pipeline internals -->
+    <path d="M410,742 L440,742" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+    <path d="M860,742 L890,742" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+    <path d="M1250,742 L1300,742" stroke="#34D399" stroke-width="2.6" fill="none" marker-end="url(#m-green)"/>
+    <text class="edge-label" x="1256" y="730" fill="#34D399">PASS</text>
+
+    <!-- fact-check FAIL -> quarantine in postgres -->
+    <path d="M1000,872 L1000,902 L36,902 L36,1400 L70,1400" stroke="#F87171" stroke-width="2.4" fill="none" marker-end="url(#m-red)"/>
+    <text class="edge-label" x="1012" y="892" fill="#F87171">FAIL → rejected_draft, with the reason</text>
+
+    <!-- persist -> postgres -->
+    <path d="M1630,872 L1672,872 L1672,1292 L600,1292 L600,1322" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+    <text class="edge-label" x="700" y="1284" fill="#94A3B8">cards + quarantine + counters — ONE transaction</text>
+
+    <!-- outbox worker -> qdrant -->
+    <path d="M1455,872 L1455,1240 L1130,1240 L1130,1322" stroke="#A78BFA" stroke-width="2.3" stroke-dasharray="5,5" fill="none" marker-end="url(#m-violet)"/>
+    <text class="edge-label" x="1160" y="1232" fill="#A78BFA">outbox drain</text>
+
+    <!-- resolver -> qdrant lookup -->
+    <path d="M1630,340 L1700,340 L1700,1440 L1230,1440" stroke="#A78BFA" stroke-width="2.3" stroke-dasharray="5,5" fill="none" marker-end="url(#m-violet)"/>
+    <text class="edge-label" x="1546" y="332" fill="#A78BFA">search @ 0.955</text>
+
+    <!-- resolver -> postgres same-name read -->
+    <path d="M1270,340 L16,340 L16,1480 L70,1480" stroke="#2DD4BF" stroke-width="2.3" stroke-dasharray="5,5" fill="none" marker-end="url(#m-teal)"/>
+    <text class="edge-label" x="78" y="414" fill="#2DD4BF">same-name read — Qdrant lags the outbox (P35)</text>
+
+    <!-- resolver -> embeddings -->
+    <path d="M1630,380 L1688,380 L1688,960 L830,960 L830,1002" stroke="#64748B" stroke-width="2.2" stroke-dasharray="5,5" fill="none" marker-end="url(#m-gray)"/>
+    <!-- graph -> gateway -->
+    <path d="M600,872 L600,932 L300,932 L300,1002" stroke="#64748B" stroke-width="2.2" stroke-dasharray="5,5" fill="none" marker-end="url(#m-gray)"/>
+    <!-- gateway -> ollama -->
+    <path d="M300,1152 L300,1200 L1370,1200 L1370,1152" stroke="#64748B" stroke-width="2.3" fill="none" marker-end="url(#m-gray)"/>
+    <text class="edge-label" x="700" y="1192" fill="#94A3B8">every LLM call — host.docker.internal:11434</text>
+
+    <!-- app <-> local storage -->
+    <path d="M1080,75 L1720,75 L1720,1460 L1630,1460" stroke="#2DD4BF" stroke-width="2.3" stroke-dasharray="5,5" fill="none" marker-end="url(#m-teal)"/>
+    <text class="edge-label" x="1500" y="67" fill="#2DD4BF">token only</text>
+  </svg>
+
+  <!-- ===== CLIENT ===== -->
+  <div class="band" style="left:40px;top:0px;width:1620px;height:140px;border-color:rgba(45,212,191,0.35);"></div>
+  <div class="band-label" style="left:60px;top:10px;color:#5EEAD4;">Client — one Expo codebase</div>
+  <div class="box client" style="left:620px;top:32px;width:460px;height:88px;">
+    <span class="tag">Expo SDK 57 · Expo Router</span>
+    <h3>Website · iOS · Android</h3>
+    <p>Desktop reads as a keyboard reader; phones swipe one card. Web dev server on <em>:8082</em> — 8081 is the embeddings service.</p>
+  </div>
+
+  <!-- ===== SERVING ===== -->
+  <div class="band" style="left:40px;top:170px;width:1620px;height:250px;border-color:rgba(129,140,248,0.4);"></div>
+  <div class="band-label" style="left:60px;top:180px;color:#A5B4FC;">Serving — Node 22 · Express · answers in milliseconds</div>
+
+  <div class="box serving" style="left:70px;top:210px;width:370px;height:190px;">
+    <span class="tag">HTTP · :3000</span>
+    <h3>Routes + Auth</h3>
+    <ul>
+      <li>POST /v1/auth/login</li>
+      <li>POST /v1/feed · /feed/revision</li>
+      <li>POST /fields/:id/expand</li>
+      <li>GET /fields/:id/adjacent</li>
+      <li>POST /views · saves · erasure</li>
+    </ul>
+    <p style="margin-top:5px;">Dev login: HMAC-signed token, constant-time compare.</p>
+  </div>
+
+  <div class="box serving" style="left:470px;top:210px;width:370px;height:190px;">
+    <span class="tag">Domain</span>
+    <h3>Feed Orchestrator</h3>
+    <p>Assembles a page and keeps three states apart: <em>normal</em>, <em>generating</em> (keep polling), <em>exhausted</em> (end card).</p>
+    <p>Carries <em>progress {viewed, total}</em> so cards number across the whole field, and <em>last_expansion</em>.</p>
+  </div>
+
+  <div class="box serving" style="left:870px;top:210px;width:370px;height:190px;">
+    <span class="tag">Background worker · in-process</span>
+    <h3>Field Expansion Worker</h3>
+    <p>Claims a <em>field_expansion</em> job, asks the LLM for candidate topics + descriptions (32–54s), resolves each.</p>
+    <p>An initial expansion is enqueued <em>at most once per field, ever</em> — polling must not buy another run (P16).</p>
+  </div>
+
+  <div class="box serving" style="left:1270px;top:210px;width:360px;height:190px;">
+    <span class="tag">Decision · the branch point</span>
+    <h3>Topic Resolver</h3>
+    <p>Under an advisory lock on the name: embed → search Qdrant @ <em>0.955</em> → <em>and</em> read Postgres for same-name topics whose vector is still owed.</p>
+    <p>Out: <em>reused · joined · requeued · created</em>.</p>
+  </div>
+
+  <!-- ===== HANDOFF ===== -->
+  <div class="box decision" style="left:470px;top:462px;width:760px;height:80px;">
+    <span class="tag">The only integration between the two services</span>
+    <h3>topic.status = 'pending' — the handoff</h3>
+    <p>No HTTP, no broker, no RPC. The row <em>is</em> the job, claimed with <code>FOR UPDATE SKIP LOCKED</code>; <code>claimed_at</code> is the lease and doubles as backoff.</p>
+  </div>
+
+  <div class="box success" style="left:1290px;top:462px;width:340px;height:80px;">
+    <span class="tag">The other outcome — the product's thesis</span>
+    <h3>Reuse: link + serve</h3>
+    <p>One <em>field_topic</em> row. Existing cards serve under the new field immediately. No scrape, no generation, no fact-check.</p>
+  </div>
+
+  <!-- ===== PIPELINE ===== -->
+  <div class="band" style="left:40px;top:582px;width:1620px;height:310px;border-color:rgba(167,139,250,0.4);"></div>
+  <div class="band-label" style="left:60px;top:592px;color:#C4B5FD;">Pipeline — Python 3.12 · LangGraph · answers in minutes</div>
+
+  <div class="box pipeline" style="left:70px;top:612px;width:340px;height:260px;">
+    <span class="tag">Worker</span>
+    <h3>Topic Worker</h3>
+    <p>Claims one pending topic and runs the graph. Started in the service's <em>lifespan</em>, on by default.</p>
+    <p>It had been built, proven by scripts, and <em>never started in the deployed service</em> for days (P37) — which is why /health now names each worker.</p>
+  </div>
+
+  <div class="box agent" style="left:440px;top:612px;width:420px;height:260px;">
+    <span class="tag">LangGraph · 5 steps, 1 real branch</span>
+    <h3>Scrape ∥ Data-gen → Card-gen</h3>
+    <p><em>scraper</em> — plain HTTP, no browser; Wikipedia then Javadoc, with a relevance check that refuses the wrong article (P26, P27).</p>
+    <p><em>data_gen</em> — supplementary material, runs concurrently.</p>
+    <p><em>join</em> — a no-op node that is load-bearing: LangGraph fires a node when ANY inbound edge fires (P30).</p>
+    <p><em>card_gen</em> — 2–4 drafts; an invented source_url is rejected.</p>
+  </div>
+
+  <div class="box gate" style="left:890px;top:612px;width:360px;height:260px;">
+    <span class="tag">The only quality gate</span>
+    <h3>Fact-Check Agent</h3>
+    <p>Judges each draft against the gathered material. A source longer than one context window is <em>chunked, never truncated</em> — Ollama silently drops the front of an over-long prompt, where the card is (P33).</p>
+    <p>Per fragment: only <em>contradiction</em> is decisive. Silence never rejects.</p>
+    <p>An unrecognised verdict <em>raises</em> rather than defaulting to fail (P29).</p>
+  </div>
+
+  <div class="box pipeline" style="left:1300px;top:612px;width:330px;height:260px;">
+    <span class="tag">Persistence + worker</span>
+    <h3>Persist · Outbox Worker</h3>
+    <p>Cards, quarantine rows and counters in <em>one transaction</em>, so the numbers can never disagree with what was stored.</p>
+    <p>The outbox worker drains owed vectors into Qdrant: retry with backoff, dead-letter, and a reaper for rows a dead worker stranded.</p>
+  </div>
+
+  <!-- ===== MODELS ===== -->
+  <div class="band" style="left:40px;top:962px;width:1620px;height:280px;border-color:rgba(148,163,184,0.35);"></div>
+  <div class="band-label" style="left:60px;top:972px;color:#CBD5E1;">Model serving — all local, no API key</div>
+
+  <div class="box infra" style="left:70px;top:1002px;width:480px;height:150px;">
+    <span class="tag">Container · :4000</span>
+    <h3>LiteLLM Gateway</h3>
+    <p>One OpenAI-shaped endpoint, so the model is a config value. <em>qwen3:8b, thinking off</em> — thinking consumed the token budget and LiteLLM rewrote the prompt (P23).</p>
+  </div>
+
+  <div class="box infra" style="left:590px;top:1002px;width:480px;height:150px;">
+    <span class="tag">Container · :8081→:80</span>
+    <h3>Embeddings (HF TEI)</h3>
+    <p><em>intfloat/e5-base-v2</em>, 768 dims. The hottest call in the system, so it bypasses the gateway. Image tag pinned exactly: a drifting pull would silently invalidate the calibrated threshold (P19).</p>
+  </div>
+
+  <div class="box infra" style="left:1110px;top:1002px;width:520px;height:150px;">
+    <span class="tag">Host process · :11434 · NOT a container</span>
+    <h3>Ollama</h3>
+    <p>Weights and GPU live on the host. If it is down, generation silently stalls — the gateway's health endpoint still answers 200. Check with <code>ollama list</code>.</p>
+  </div>
+
+  <!-- ===== DATA ===== -->
+  <div class="band" style="left:40px;top:1282px;width:1620px;height:330px;border-color:rgba(16,185,129,0.3);"></div>
+  <div class="band-label" style="left:60px;top:1292px;color:#6EE7B7;">Data — Postgres is the source of truth; everything else is derived</div>
+
+  <div class="box reldb" style="left:70px;top:1322px;width:760px;height:270px;">
+    <span class="tag">Postgres 16 · 15 tables · 12 migrations</span>
+    <h3>Source of truth — and every queue</h3>
+    <ul>
+      <li>field · topic(status,claimed_at) · field_topic ← reuse</li>
+      <li>scroll + live_scroll VIEW ← retire, never delete</li>
+      <li>user_view ← APPEND-ONLY, and the paging position</li>
+      <li>saved_scroll · account · erasure_log</li>
+      <li>rejected_draft (cap 20) · topic_generation_stats</li>
+      <li>outbox · field_expansion · field_suggestion</li>
+      <li>unsourced_topic ← resolved, not deleted</li>
+    </ul>
+    <p style="margin-top:5px;">Triggers enforce what convention cannot. 22 invariant checks in <code>verify-invariants.sql</code>.</p>
+  </div>
+
+  <div class="box vecdb" style="left:870px;top:1322px;width:360px;height:270px;">
+    <span class="tag">Qdrant · DERIVED</span>
+    <h3>Two collections</h3>
+    <p><em>topic_names</em> — the reuse lookup.<br><em>scroll_contents</em> — semantic search.</p>
+    <p>768 dims, cosine. Size cannot change after creation: a new model is a rebuild <em>and</em> a re-calibration.</p>
+    <p>Delete it and <code>reindex</code> rebuilds it. The reverse is not true.</p>
+  </div>
+
+  <div class="box client" style="left:1270px;top:1322px;width:360px;height:270px;">
+    <span class="tag">On the device</span>
+    <h3>Client storage</h3>
+    <p>The auth token only — keychain on native, localStorage on web.</p>
+    <p>Saves and views live on the server, because they are correctness data, not cache. The local-storage mirror (2b.3) is not built.</p>
+  </div>
+
+  <!-- ===== CROSS-CUTTING ===== -->
+  <div class="band" style="left:40px;top:1652px;width:1620px;height:250px;border-color:rgba(148,163,184,0.35);"></div>
+  <div class="band-label" style="left:60px;top:1662px;color:#CBD5E1;">Cross-cutting — wraps the system, not a step in it</div>
+
+  <div class="box infra" style="left:70px;top:1692px;width:500px;height:190px;">
+    <span class="tag">CI · GitHub Actions</span>
+    <h3>Four jobs, every push and PR</h3>
+    <ul>
+      <li>serving — typecheck + 85 tests (real Postgres)</li>
+      <li>pipeline — ruff + pytest (real Postgres)</li>
+      <li>app — tsc + expo export (compiles every route)</li>
+      <li>migrations — migrate TWICE on an empty DB</li>
+    </ul>
+    <p style="margin-top:5px;">It ran red four times unnoticed because serving had no database (P34).</p>
+  </div>
+
+  <div class="box infra" style="left:610px;top:1692px;width:500px;height:190px;">
+    <span class="tag">Observability — what exists today</span>
+    <h3>/health · /metrics · counters</h3>
+    <p>Serving: db. Pipeline: db + <em>each worker by name</em>, 503 if an enabled worker died.</p>
+    <p><code>/metrics</code> in Prometheus format: drafts generated/passed/failed, checker errors kept separate, outcomes, durations, outbox.</p>
+    <p><em>Nothing scrapes it yet</em> — no Prometheus, no Grafana, no alerts (W7).</p>
+  </div>
+
+  <div class="box infra" style="left:1150px;top:1692px;width:480px;height:190px;">
+    <span class="tag">The habit that runs through all of it</span>
+    <h3>Every gate has a negative control</h3>
+    <p><code>negative_control.py</code> feeds the checker known-false cards. A 0.000 rejection rate and a blind gate look identical.</p>
+    <p>The rule: <em>see it fail with the mechanism removed, or you have not tested it.</em></p>
+  </div>
+
+</div>
+</div>
+
+<div class="note key">
+<b>Read this before anything else:</b> there is no arrow between Serving and Pipeline. The dashed amber pair through
+<code>topic.status = 'pending'</code> is the entire integration. Either service can be restarted, rebuilt or broken
+without the other losing a job — and that single fact explains most of the decisions below.
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 1 — HLD                                                      -->
+<!-- ============================================================ -->
+<section id="hld">
+<h2><span class="num">01</span>High-level design</h2>
+<div class="section-intro">
+Three zoom levels: the system in its world, the pieces inside it, and where those pieces physically run.
+</div>
+
+<h3 class="diagram-title">1.1 Context <span>— the system and everything outside it</span></h3>
+<div class="diagram" data-diagram="ctx"></div>
+<script type="text/x-mermaid" data-for="ctx">
+flowchart TB
+    learner(["Learner<br/>wants priming or revision"])
+
+    subgraph instacram["InstaCram"]
+        sys["Field-scoped microlearning cards<br/>name a field, get one-page cards"]
+    end
+
+    wiki["Wikipedia / Wikimedia<br/>grounding source"]
+    javadoc["Oracle Javadoc<br/>grounding source for classes<br/>an encyclopedia has no page for"]
+    ollama["Ollama on the host<br/>qwen3:8b, local, no API key"]
+    firebase["Firebase Auth<br/>PLANNED - Google sign-in"]
+
+    learner -->|"names a field, reads cards,<br/>saves, revises"| sys
+    sys -->|"HTTPS, identified User-Agent,<br/>respects robots.txt"| wiki
+    sys -->|"deterministic URL per class"| javadoc
+    sys -->|"every LLM call"| ollama
+    sys -.->|"not built yet"| firebase
+
+    classDef planned stroke-dasharray: 5 5
+    class firebase planned
+</script>
+<div class="note">
+Every external dependency except the two sources is <b>local</b>. No cloud LLM, no managed vector service, no analytics.
+The cost of a generated card is electricity — which is why measuring cost per topic was possible at all.
+The scraper identifies itself honestly, and the topic worker <b>refuses to start</b> without a contact rather than scraping anonymously.
+</div>
+
+<h3 class="diagram-title">1.2 Containers <span>— what runs, and what each one owns</span></h3>
+<div class="diagram" data-diagram="cont"></div>
+<script type="text/x-mermaid" data-for="cont">
+flowchart TB
+    subgraph client["Client tier"]
+        app["Expo app<br/>web · iOS · Android<br/>TypeScript, Expo Router<br/>:8082 dev server"]
+    end
+
+    subgraph fast["Fast path - answers in milliseconds"]
+        serving["serving :3000<br/>Node 22 · Express · TS<br/>feed · auth · views · saves<br/>topic resolution · expansion worker"]
+    end
+
+    subgraph slow["Slow path - answers in minutes"]
+        pipeline["pipeline :8000<br/>Python 3.12 · FastAPI · LangGraph<br/>4 agents · topic worker · outbox worker"]
+    end
+
+    subgraph data["State"]
+        pg[("postgres :5432<br/>SOURCE OF TRUTH<br/>15 tables · every queue")]
+        qd[("qdrant :6333<br/>DERIVED<br/>topic_names · scroll_contents<br/>768 dims, cosine")]
+    end
+
+    subgraph models["Model serving"]
+        emb["embeddings :8081 to :80<br/>HF TEI, e5-base-v2<br/>hottest call in the system"]
+        gw["llm-gateway :4000<br/>LiteLLM<br/>the model is a config value"]
+        oll["Ollama :11434<br/>on the host, not a container"]
+    end
+
+    app -->|"HTTPS + bearer token"| serving
+    serving --> pg
+    serving --> qd
+    serving --> emb
+    serving --> gw
+    pipeline --> pg
+    pipeline --> qd
+    pipeline --> emb
+    pipeline --> gw
+    gw --> oll
+    pipeline -->|"plain HTTP, no browser"| web["Wikipedia · Javadoc"]
+
+    serving -.->|"writes topic status=pending<br/>THE ONLY HANDOFF"| pg
+    pg -.->|"claims it<br/>FOR UPDATE SKIP LOCKED"| pipeline
+
+    classDef fastcls fill:#dbeafe,stroke:#2563eb,color:#0B1220
+    classDef slowcls fill:#ede9fe,stroke:#7c3aed,color:#0B1220
+    classDef infra fill:#e2e8f0,stroke:#64748b,color:#0B1220
+    class serving fastcls
+    class pipeline slowcls
+    class pg,qd,emb,gw,oll,web infra
+</script>
+<table>
+<tr><th>What to notice</th><th>Why it matters</th></tr>
+<tr><td><b>No arrow between serving and pipeline</b></td><td>The dashed pair through Postgres is the entire integration.</td></tr>
+<tr><td><b>Both services talk to the same four things</b></td><td>And both must agree on the embedded-text prefix and the match threshold. If they disagree, vectors written by one never match vectors searched by the other — silently. Hence the explicit forwarding in <code>docker-compose.yml</code>.</td></tr>
+<tr><td><b>Qdrant is derived</b></td><td>Delete it and <code>reindex</code> rebuilds it. Nothing is designed as though the reverse were true.</td></tr>
+<tr><td><b>Embeddings bypass the gateway</b></td><td>One is a hot, small-model call; the other is slow and large. Routing both through one gateway puts the hot path behind the slow one's queue.</td></tr>
+</table>
+
+<h3 class="diagram-title">1.3 Deployment <span>— where it physically runs today</span></h3>
+<div class="diagram" data-diagram="dep"></div>
+<script type="text/x-mermaid" data-for="dep">
+flowchart TB
+    subgraph host["Your machine - Windows"]
+        direction TB
+
+        subgraph ollama_node["Host process"]
+            oll["ollama serve :11434<br/>model weights + GPU live here"]
+        end
+
+        subgraph expo_node["Host process"]
+            expo["expo start --web :8082<br/>8081 is taken by embeddings"]
+        end
+
+        subgraph docker["Docker Desktop - compose project 'instacram'<br/>network: instacram_default"]
+            c1["postgres:16-alpine :5432"]
+            c2["qdrant/qdrant:v1.12.1 :6333"]
+            c3["text-embeddings-inference:cpu-1.9.3<br/>:8081 to :80 - tag pinned exactly"]
+            c4["litellm:main-latest :4000"]
+            c5["serving - built from repo root<br/>:3000 migrate and serve"]
+            c6["pipeline - built from repo root<br/>:8000 uvicorn + 2 workers"]
+
+            v1[("volume pgdata")]
+            v2[("volume qdrantdata")]
+            v3[("volume embeddingcache")]
+        end
+
+        browser["Chrome"]
+    end
+
+    c1 --- v1
+    c2 --- v2
+    c3 --- v3
+    c4 -->|"host.docker.internal:11434<br/>extra_hosts maps it on Linux too"| oll
+    browser --> expo
+    browser -->|"direct API calls<br/>CORS_ORIGINS must list :8082"| c5
+    c5 -->|"depends_on: service_healthy"| c1
+    c6 -->|"depends_on: service_healthy"| c1
+
+    classDef vol fill:#fef9c3,stroke:#ca8a04,color:#0B1220
+    class v1,v2,v3 vol
+</script>
+<div class="note">
+<b>Two processes are not containers</b>, and both are easy to forget: Ollama and the Expo dev server.
+<b>The browser calls the API directly</b>, so the API's CORS list decides whether the app works.
+<b>Three named volumes hold everything you would miss</b> — database, vectors, and the cached model (a 289–329s download).
+<code>docker compose down</code> keeps them; <code>down -v</code> destroys all three.
+<b>Only Postgres has a healthcheck others wait on</b> — the rest are used lazily and retried.
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 2 — LLD                                                      -->
+<!-- ============================================================ -->
+<section id="lld">
+<h2><span class="num">02</span>Low-level design</h2>
+<div class="section-intro">
+Inside each service: the modules, who calls whom, and the objects that carry the design.
+</div>
+
+<h3 class="diagram-title">2.1 Components <span>— serving</span></h3>
+<div class="diagram" data-diagram="csrv"></div>
+<script type="text/x-mermaid" data-for="csrv">
+flowchart TB
+    subgraph http["HTTP layer"]
+        cors["cors.ts<br/>listed origins only"]
+        authmw["auth.ts requireAccount<br/>dev · dev-login · firebase(501)"]
+        rauth["routes/auth.ts<br/>POST /v1/auth/login"]
+        rfeed["routes/feed.ts<br/>POST /feed · /feed/revision<br/>POST /fields/:id/expand<br/>GET /fields/:id/adjacent"]
+        racct["routes/account.ts<br/>POST /views · GET /saves<br/>PUT or DELETE /saves/:id<br/>DELETE /account"]
+    end
+
+    subgraph domain["Domain"]
+        feedsvc["feed/feedService.ts<br/>page assembly:<br/>generating · exhausted · end card · progress"]
+        resolve["topics/resolve.ts<br/>THE BRANCH POINT<br/>reused | joined | requeued | created"]
+        cand["topics/candidates.ts<br/>LLM: field to candidates"]
+        adj["topics/adjacent.ts<br/>LLM: related fields"]
+        etext["topics/embeddingText.ts<br/>the ONE place the embedded string<br/>is built - a cross-service contract"]
+    end
+
+    subgraph work["Background"]
+        equeue["expansion/queue.ts<br/>the field_expansion job table<br/>claim · reap · complete · fail"]
+        eworker["expansion/worker.ts<br/>claim to candidates to resolve each"]
+    end
+
+    subgraph repo["Persistence"]
+        rfields["repo/fields.ts"]
+        rfeedr["repo/feed.ts<br/>every read via live_scroll"]
+        raccts["repo/accounts.ts"]
+        pool["db/pool.ts · db/migrate.ts"]
+    end
+
+    subgraph out["Outbound"]
+        embc["embeddings/client.ts<br/>batched, 32 at a time"]
+        llmc["llm/client.ts<br/>JSON mode + control-char repair"]
+        vidx["vectors/topicIndex.ts<br/>search only"]
+    end
+
+    rauth --> authmw
+    rfeed --> authmw
+    racct --> authmw
+    cors --> rauth
+    rfeed --> feedsvc
+    racct --> raccts
+    feedsvc --> rfeedr
+    feedsvc --> rfields
+    feedsvc --> equeue
+    eworker --> equeue
+    eworker --> cand
+    eworker --> resolve
+    eworker --> adj
+    resolve --> etext
+    resolve --> embc
+    resolve --> vidx
+    resolve --> pool
+    cand --> llmc
+    adj --> llmc
+    rfeedr --> pool
+    rfields --> pool
+    raccts --> pool
+
+    classDef key fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0B1220
+    class resolve,etext key
+</script>
+<div class="note">
+<b>The candidate generator lives here, not in the pipeline</b> — it runs on every field request, including pure cache hits where no generation happens.
+<b><code>embeddingText.ts</code> is a contract, not a helper:</b> the pipeline builds the same string in its own <code>embedding_text.py</code>, and if they drift nothing errors, the cache just stops finding things.
+<b><code>repo/feed.ts</code> reads only <code>live_scroll</code></b>, so a retired card cannot reach a user through a filter someone forgot.
+</div>
+
+<h3 class="diagram-title">2.2 Components <span>— pipeline</span></h3>
+<div class="diagram" data-diagram="cpipe"></div>
+<script type="text/x-mermaid" data-for="cpipe">
+flowchart TB
+    subgraph api["FastAPI"]
+        health["/health<br/>db + EACH worker by name<br/>503 if an enabled worker died (P37)"]
+        metrics["/metrics<br/>Prometheus text"]
+        life["lifespan<br/>starts both workers - on by default"]
+    end
+
+    subgraph workers["Workers"]
+        tw["workers/topics.py<br/>claim pending topic<br/>SKIP LOCKED · stale claim = backoff"]
+        ow["workers/outbox.py<br/>drain owed vectors<br/>retry · dead-letter · reap"]
+        rec["workers/reconcile.py<br/>missing to re-enqueue<br/>orphan to delete · reindex"]
+    end
+
+    subgraph graph["graph/pipeline.py - LangGraph"]
+        g["5 steps · 1 real branch<br/>4 distinguishable outcomes"]
+    end
+
+    subgraph agents["Agents"]
+        scr["agents/scraper.py<br/>plain HTTP, no browser"]
+        rel["relevance.py<br/>is the page about the topic?<br/>strict sibling rule (P27)"]
+        dg["agents/data_gen.py"]
+        cg["agents/card_gen.py<br/>rejects an invented source_url"]
+        fc["agents/fact_check.py<br/>THE ONLY QUALITY GATE"]
+        chunk["chunking.py<br/>long sources chunked, never truncated (P33)"]
+    end
+
+    subgraph srcs["Sources"]
+        wiki["sources/wikipedia.py<br/>multi-candidate discovery"]
+        jd["sources/javadoc.py<br/>deterministic URL; beware soft 404 (P28)"]
+    end
+
+    subgraph store["Persistence"]
+        per["repo/persist.py<br/>cards + quarantine + counters<br/>ONE transaction"]
+        qdr["stores/qdrant.py<br/>never creates a collection"]
+        embs["stores/embeddings.py"]
+        uns["repo/unsourced.py<br/>upsert, resolve, never append"]
+    end
+
+    life --> tw
+    life --> ow
+    tw --> g
+    g --> scr
+    g --> dg
+    g --> cg
+    g --> fc
+    scr --> rel
+    scr --> wiki
+    scr --> jd
+    scr --> uns
+    fc --> chunk
+    g --> per
+    ow --> qdr
+    ow --> embs
+    rec --> qdr
+
+    classDef gate fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#0B1220
+    class fc,chunk gate
+</script>
+<div class="note bug">
+<b><code>lifespan</code> is where P37 was.</b> Both workers existed and neither ever started in the deployed service.
+They now start by default — a default of <i>off</i> would recreate the bug the first time someone deployed without the variable — and <code>/health</code> reports each by name.
+<b><code>stores/qdrant.py</code> never creates a collection</b>, because a service that silently creates one with the wrong vector size turns a loud failure into a silent one.
+</div>
+
+<h3 class="diagram-title">2.3 Class <span>— topic resolution, the branch the product rests on</span></h3>
+<div class="diagram" data-diagram="clsres"></div>
+<script type="text/x-mermaid" data-for="clsres">
+classDiagram
+    class ResolveDeps {
+        +embed(text) Promise~number[]~
+        +search(vector, limit) Promise~Match[]~
+        +threshold: number
+        +beforeDecide()? Promise~void~
+        test-only barrier; production never sets it
+    }
+
+    class Candidate {
+        +name: string
+        +description: string
+    }
+
+    class Resolution {
+        +outcome: reused|joined|requeued|created
+        +topicId: string
+        +newLink: boolean
+    }
+
+    class resolveCandidate {
+        +resolveCandidate(fieldId, candidate, deps) Resolution
+        -pg_advisory_xact_lock(hash of name)
+        -searchTopicNames(vector)
+        -sameNameRowsInPostgres()
+        -chooseMatch(matches) Match
+    }
+
+    class chooseMatch {
+        deterministic: score, then ready, then oldest, then id
+        two fields must never link different copies
+    }
+
+    ResolveDeps <.. resolveCandidate : injected
+    Candidate <.. resolveCandidate : input
+    resolveCandidate --> Resolution : returns
+    resolveCandidate ..> chooseMatch : uses
+</script>
+<table>
+<tr><th>Defence</th><th>What happens without it</th></tr>
+<tr><td>Advisory lock on the candidate name</td><td>8 simultaneous requests create <b>8 topics</b></td></tr>
+<tr><td>Same-name read from Postgres</td><td><b>8 duplicates again</b> — Qdrant cannot see a topic whose vector the outbox has not written</td></tr>
+<tr><td>Deterministic <code>chooseMatch</code></td><td>Two fields link different copies, and the reuse guarantee quietly stops holding</td></tr>
+</table>
+<div class="note bug">
+Each row was <b>seen failing with its mechanism removed</b> (P35). The middle one is the valuable one: with the lock held the run took 1,433ms —
+the requests genuinely serialised — and still produced eight duplicates. That turned <i>"a lock around a read of an eventually-consistent store
+serialises nothing that matters"</i> from an argument into a measurement. <code>beforeDecide</code> exists only so a test can force eight
+requests to interleave inside the lock; concurrency that depends on the scheduler being kind is not a test.
+</div>
+
+<h3 class="diagram-title">2.4 Class <span>— the client's feed state</span></h3>
+<div class="diagram" data-diagram="clsfeed"></div>
+<script type="text/x-mermaid" data-for="clsfeed">
+classDiagram
+    class useFeed {
+        +cards: ScrollCard[]
+        +page: FeedPage
+        +position: number
+        +seenBefore: number
+        +focused: boolean
+        +onDisplayed(index, card)
+        +onReachedEnd()
+        +toggleSave(card)
+        +expand()
+        +reload()
+        -inHand: Set~id~
+        -displayed: Set~id~
+        -pendingViews: PendingView[]
+        -flushViews(keepalive)
+    }
+
+    class Reader {
+        desktop
+        +index: number
+        moves by INDEX, not scroll offset
+        +keys: J K Space S Esc
+        +number = seenBefore + index + 1
+    }
+
+    class SwipeFeed {
+        phone
+        one full-screen card per swipe
+    }
+
+    class FeedPage {
+        +scrolls: ScrollCard[]
+        +generating: boolean
+        +exhausted: boolean
+        +retry_after_ms?: number
+        +progress: viewed, total
+        +last_expansion
+        +end_card
+    }
+
+    useFeed --> FeedPage : holds
+    Reader --> useFeed : drives
+    SwipeFeed --> useFeed : drives
+</script>
+<div class="note">
+Two rules of the API contract live in this one hook, and both corrupt data silently when broken:
+<b>log a view on display, never on fetch</b> (prefetch means the app holds cards nobody has seen), and <b>poll at <code>retry_after_ms</code></b>.
+Three fields exist because of P38 — <code>focused</code>, <code>flushViews(keepalive)</code> and <code>seenBefore</code>. See §6.4.
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 3 — DATA MODEL                                               -->
+<!-- ============================================================ -->
+<section id="data">
+<h2><span class="num">03</span>Data model</h2>
+<div class="section-intro">
+15 tables, one view, 12 forward-only migrations. What is stored, how it relates, and what crosses the wire.
+</div>
+
+<h3 class="diagram-title">3.1 Entity relationships</h3>
+<div class="diagram" data-diagram="er"></div>
+<script type="text/x-mermaid" data-for="er">
+erDiagram
+    field ||--o{ field_topic : "links"
+    topic ||--o{ field_topic : "linked from"
+    topic ||--o{ scroll : "produces"
+    topic ||--o{ rejected_draft : "quarantines"
+    topic ||--|| topic_generation_stats : "counts"
+    topic ||--o{ outbox : "owes a vector"
+    scroll ||--o{ user_view : "was displayed as"
+    scroll ||--o{ saved_scroll : "saved as"
+    account ||--o{ user_view : "viewed"
+    account ||--o{ saved_scroll : "saved"
+    field ||--o{ field_expansion : "job per request"
+    field ||--o{ field_suggestion : "stored LLM suggestions"
+
+    field {
+        uuid id PK
+        text name
+        text name_norm "GENERATED lower(btrim(name)) - UNIQUE"
+        timestamptz suggestions_at "when suggestions were last generated"
+    }
+
+    topic {
+        uuid id PK
+        text name
+        text name_norm "GENERATED - NOT unique, duplicates are legal"
+        text description "written ONCE, never rewritten (trigger)"
+        text status "pending | ready | empty"
+        timestamptz claimed_at "the claim IS the job lease, and the backoff"
+    }
+
+    field_topic {
+        uuid field_id FK
+        uuid topic_id FK
+        timestamptz created_at
+    }
+
+    scroll {
+        uuid id PK
+        uuid topic_id FK
+        text content
+        text source_url
+        text trust_label "sourced_verified | ai_generated"
+        text why_it_matters
+        text recall_prompt
+        text recall_answer
+        timestamptz retired_at "retire, never delete (trigger blocks delete)"
+    }
+
+    user_view {
+        bigserial id PK
+        uuid user_id FK
+        uuid scroll_id FK
+        timestamptz viewed_at "APPEND ONLY - update and delete blocked"
+    }
+
+    saved_scroll {
+        uuid account_id FK
+        uuid scroll_id FK
+        timestamptz saved_at
+    }
+
+    account {
+        uuid id PK
+        text firebase_uid "UNIQUE - dev logins namespaced 'dev:'"
+        text email
+    }
+
+    rejected_draft {
+        uuid id PK
+        uuid topic_id FK
+        text content
+        text reason "the checker's own words - the only thing separating a strict gate from a bad generator"
+        timestamptz rejected_at "capped at 20 per topic, by trigger"
+    }
+
+    topic_generation_stats {
+        uuid topic_id PK
+        integer drafts_generated
+        integer drafts_passed
+        integer drafts_failed
+        integer runs "runs > 1 means it came back empty and was retried"
+    }
+
+    outbox {
+        bigserial id PK
+        uuid topic_id FK
+        jsonb payload
+        text status "pending | processing | done | failed"
+        integer attempts
+        text last_error
+        timestamptz next_attempt_at "backoff"
+        timestamptz processed_at
+    }
+
+    field_expansion {
+        bigserial id PK
+        uuid field_id FK
+        text kind "initial | more"
+        text status "pending | running | done | failed"
+        integer attempts
+        timestamptz claimed_at
+        integer candidates
+        integer reused
+        integer joined
+        integer requeued
+        integer created
+        integer linked_existing
+        integer failed_retried
+        integer resolve_errors
+    }
+
+    field_suggestion {
+        uuid field_id FK
+        text name
+        integer position
+    }
+
+    unsourced_topic {
+        bigserial id PK
+        text topic_name
+        text field_name
+        text source
+        text matched_title
+        text kind "no_article | generic"
+        integer times_detected "deduped, never appended per run"
+        timestamptz resolved_at "resolved, not deleted, when a source succeeds"
+    }
+
+    erasure_log {
+        bigserial id PK
+        integer views_removed "counts only - NO identifier"
+        integer saves_removed
+    }
+</script>
+<table>
+<tr><th>In the schema</th><th>The decision it encodes</th></tr>
+<tr><td><code>field_topic</code> as a junction; <code>topic.name_norm</code> <b>not</b> unique</td><td>A topic is not owned by a field, and duplicates are <b>legal</b>. The system prefers a wasted duplicate to a wrong merge.</td></tr>
+<tr><td><code>topic.status = 'empty'</code></td><td>A topic whose drafts all failed must be representable, or the cache re-serves it as a success forever.</td></tr>
+<tr><td><code>scroll.retired_at</code> + <code>live_scroll</code></td><td>A bad card disappears from every read while its view history survives. Deleting it would break the history.</td></tr>
+<tr><td><code>user_view</code> append-only, by trigger</td><td>It is the paging position <b>and</b> the only dataset that cannot be rebuilt. Convention would not be enough.</td></tr>
+<tr><td><code>erasure_log</code> with counts and no identifier</td><td>Proving an erasure happened must not re-create the data it erased.</td></tr>
+</table>
+<div class="note">
+<b>Enforced by the database, not by code.</b> Triggers block: updating or deleting a <code>user_view</code>; deleting a <code>scroll</code> anyone has viewed;
+rewriting a <code>topic.description</code>; deleting an <code>account</code> outside <code>erase_account()</code>.
+<code>verify-invariants.sql</code> tries to break each one and prints 22 PASS/FAIL checks inside a transaction it rolls back.
+</div>
+
+<h3 class="diagram-title">3.2 What crosses the wire</h3>
+<div class="diagram" data-diagram="dto"></div>
+<script type="text/x-mermaid" data-for="dto">
+classDiagram
+    class FeedPage {
+        +field: id, name
+        +scrolls: ScrollCard[]
+        +generating: boolean
+        +topics_pending: number
+        +retry_after_ms?: number
+        +failed_topics: FailedTopic[]
+        +exhausted: boolean
+        +end_card: EndCard|null
+        +last_expansion: LastExpansion|null
+        +progress: FieldProgress
+    }
+
+    class ScrollCard {
+        +id: string
+        +topic: id, name
+        +content: string
+        +source_url: string
+        +trust_label: sourced_verified|ai_generated
+        +why_it_matters: string
+        +recall: prompt, answer
+        +saved: boolean
+    }
+
+    class FieldProgress {
+        +viewed: number
+        +total: number
+        counted over live cards of ready topics
+        so viewed can never exceed total
+    }
+
+    class EndCard {
+        +viewed_count: number
+        +adjacent_fields: AdjacentField[]
+    }
+
+    class AdjacentField {
+        +id: string|null
+        +name: string
+        +shared_topics: number
+        +source: overlap|suggested
+        +has_content: boolean
+        render has_content, NOT source
+    }
+
+    class LastExpansion {
+        +kind: initial|more
+        +status: running|done|failed
+        +topics_queued: number
+        +topics_linked: number
+        +failed_retried: number
+        all three zero on a done 'more' = field exhausted
+    }
+
+    class FailedTopic {
+        +id: string
+        +name: string
+        told to the user, never silently omitted
+    }
+
+    FeedPage *-- ScrollCard
+    FeedPage *-- FieldProgress
+    FeedPage *-- EndCard
+    FeedPage *-- LastExpansion
+    FeedPage *-- FailedTopic
+    EndCard *-- AdjacentField
+</script>
+<table>
+<tr><th><code>scrolls</code></th><th><code>generating</code></th><th><code>exhausted</code></th><th>Means</th></tr>
+<tr><td>non-empty</td><td>false</td><td>false</td><td>a normal page</td></tr>
+<tr><td>partial or empty</td><td><b>true</b></td><td>false</td><td>cold start — keep polling at <code>retry_after_ms</code></td></tr>
+<tr><td>empty</td><td>false</td><td><b>true</b></td><td>the field is finished — render the end card</td></tr>
+</table>
+<div class="note">These three must never be collapsed into "loading". Conflating the middle and last rows shows the end-of-field card to someone whose field is 30 seconds old.</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 4 — SEQUENCES                                                -->
+<!-- ============================================================ -->
+<section id="seq">
+<h2><span class="num">04</span>Sequences</h2>
+<div class="section-intro">
+Six things that happen, in order. These are the diagrams to read when you want to know what actually runs on a tap.
+</div>
+
+<h3 class="diagram-title">4.1 Cold start <span>— a field nobody has asked for</span></h3>
+<div class="diagram" data-diagram="s1"></div>
+<script type="text/x-mermaid" data-for="s1">
+sequenceDiagram
+    autonumber
+    actor U as Learner
+    participant A as Expo app
+    participant S as serving
+    participant PG as postgres
+    participant EW as expansion worker
+    participant GW as llm-gateway to Ollama
+    participant EMB as embeddings
+    participant QD as qdrant
+    participant TW as topic worker (pipeline)
+
+    U->>A: names "Marine Biology"
+    A->>S: POST /v1/feed
+    S->>PG: find or create field
+    S->>PG: enqueue expansion (kind='initial')
+    Note over S,PG: at most ONCE per field, ever - polling<br/>must not buy another 32-54s LLM run (P16)
+    S->>PG: unviewed cards? none
+    S-->>A: 200 generating:true, retry_after_ms (~224ms)
+    A->>A: show waiting state, poll at the server's cadence
+
+    Note over EW: meanwhile, in the background
+    EW->>PG: claim the expansion (SKIP LOCKED)
+    EW->>GW: field to candidate topics + descriptions
+    GW-->>EW: 20 candidates (32-54s)
+
+    loop each candidate
+        EW->>PG: pg_advisory_xact_lock(hash of name)
+        EW->>EMB: embed(name + description)
+        EW->>QD: search topic_names at 0.955
+        EW->>PG: same-name rows whose vector is still owed
+        alt match found
+            EW->>PG: INSERT field_topic - reuse, zero LLM cost
+        else no match
+            EW->>PG: INSERT topic(pending) + outbox row, one transaction
+        end
+    end
+
+    Note over TW: independently, no call from serving
+    TW->>PG: claim a pending topic (SKIP LOCKED)
+    TW->>TW: scrape + data-gen, card-gen, fact-check
+    TW->>PG: cards + quarantine + counters (one txn), topic to ready
+
+    A->>S: POST /v1/feed (next poll)
+    S->>PG: unviewed cards
+    S-->>A: cards as each topic finishes
+    Note over U,A: 1.5-10 min per topic, sequential.<br/>A whole field is 40-100 min.
+</script>
+<div class="note">
+The user-facing request does four cheap database operations and returns. Everything expensive happens after it, in two workers that do not know about each other.
+Cards appear <b>per topic</b>, not per field, so a cold field becomes usable long before it is finished.
+</div>
+
+<h3 class="diagram-title">4.2 Cache hit <span>— the whole thesis in one diagram</span></h3>
+<div class="diagram" data-diagram="s2"></div>
+<script type="text/x-mermaid" data-for="s2">
+sequenceDiagram
+    autonumber
+    actor U as Learner
+    participant S as serving
+    participant EW as expansion worker
+    participant EMB as embeddings
+    participant QD as qdrant
+    participant PG as postgres
+
+    U->>S: names "Java Collections"<br/>(HashMap already exists from another field)
+    S->>PG: enqueue expansion
+    S-->>U: generating:true
+
+    EW->>EMB: embed("HashMap" + description)
+    EW->>QD: search topic_names
+    QD-->>EW: HashMap at 0.981, above 0.955
+    EW->>PG: INSERT field_topic (field, existing topic)
+
+    Note over EW,PG: no scrape. no card generation.<br/>no fact-check. one row.
+
+    U->>S: POST /v1/feed (next poll)
+    S->>PG: unviewed cards for this field
+    PG-->>S: the EXISTING cards, unchanged
+    S-->>U: identical scroll IDs, served under a new field
+</script>
+<div class="note key">
+This is the acceptance test of the entire design (<code>tests/reuse.test.ts</code>), and it was <b>seen failing with reuse disabled</b>.
+The threshold <code>0.955</code> is deliberately strict: the lowest cutoff with <b>zero</b> false merges over 44 labelled pairs, keeping 67% reuse.
+The system would rather regenerate a duplicate than show you a card about the wrong thing.
+</div>
+
+<h3 class="diagram-title">4.3 Reading, paging and view logging <span>— where the data is easiest to corrupt</span></h3>
+<div class="diagram" data-diagram="s3"></div>
+<script type="text/x-mermaid" data-for="s3">
+sequenceDiagram
+    autonumber
+    actor U as Learner
+    participant R as Reader / SwipeFeed
+    participant H as useFeed
+    participant S as serving
+    participant PG as postgres
+
+    U->>R: opens a field
+    R->>H: mount
+    H->>S: POST /v1/feed (limit 10)
+    S->>PG: cards this account has NOT viewed
+    S-->>H: 10 cards + progress viewed,total
+    H->>H: seenBefore = progress.viewed minus counted this visit
+    R->>U: "Card 64 of 91"
+
+    U->>R: reads card 64
+    R->>R: 600ms on screen
+    R->>H: onDisplayed(index, card)
+    H->>H: buffer the view
+    Note over H: only if the screen is FOCUSED - hidden<br/>stacked screens logged cards nobody saw (P38)
+    H->>S: POST /v1/views (~1s later, batched)
+    S->>PG: INSERT user_view (append-only)
+
+    U->>R: presses J three times
+    R->>H: onDisplayed x3
+    H->>S: POST /v1/views (one batch)
+
+    alt fewer than 3 cards left in hand
+        H->>S: POST /v1/feed
+        Note over H,S: views are flushed FIRST, so the server does<br/>not hand back cards already shown
+        S-->>H: the next 10 unviewed
+    end
+
+    U->>U: refreshes the browser
+    Note over H: pagehide - flush with keepalive,<br/>so the request outlives the page (P38)
+    H->>S: POST /v1/views (keepalive)
+</script>
+<div class="note bug">
+There is <b>no cursor</b>. "The next page" means "cards this account has not viewed", so the view log <i>is</i> the pagination state.
+A lost view hands the same card out again; an invented view silently burns a card the user never saw. Both happened, and neither raised an error (P38).
+</div>
+
+<h3 class="diagram-title">4.4 "More topics" <span>— the only user-triggered generation</span></h3>
+<div class="diagram" data-diagram="s4"></div>
+<script type="text/x-mermaid" data-for="s4">
+sequenceDiagram
+    autonumber
+    actor U as Learner
+    participant A as app
+    participant S as serving
+    participant PG as postgres
+    participant EW as expansion worker
+
+    U->>A: taps "More topics" on the end card
+    A->>S: POST /v1/fields/{id}/expand
+    S->>PG: re-queue this field's failed topics (empty to pending)
+    S->>PG: enqueue expansion kind='more', unless one is open
+    S-->>A: 202 expansion, failed_retried, retry_after_ms
+    Note over S,A: returns BEFORE candidates exist - what it<br/>achieved arrives later, as last_expansion
+
+    EW->>PG: claim
+    EW->>EW: candidates, EXCLUDING the field's existing topics
+    EW->>PG: resolve each - queued / linked / reused
+    EW->>PG: complete the expansion with its counts
+
+    A->>S: POST /v1/feed (poll)
+    S-->>A: last_expansion kind:'more', status:'done',<br/>topics_queued, topics_linked, failed_retried
+    alt all three are zero
+        A->>U: field is genuinely exhausted - stop offering the action
+    else anything non-zero
+        A->>U: keep going
+    end
+</script>
+<div class="note">
+Generation is never triggered by paging or polling — only by an explicit tap (P16, P17). <code>topics_linked</code> exists because a field can gain cards
+<b>without generating anything</b>, and without counting that, the action would be offered forever.
+</div>
+
+<h3 class="diagram-title">4.5 The outbox <span>— why a vector write cannot lose a topic</span></h3>
+<div class="diagram" data-diagram="s5"></div>
+<script type="text/x-mermaid" data-for="s5">
+sequenceDiagram
+    autonumber
+    participant EW as expansion worker
+    participant PG as postgres
+    participant OW as outbox worker
+    participant EMB as embeddings
+    participant QD as qdrant
+
+    EW->>PG: BEGIN
+    EW->>PG: INSERT topic (pending)
+    EW->>PG: INSERT outbox (payload, pending)
+    EW->>PG: COMMIT
+    Note over EW,PG: the INTENT to write a vector is committed<br/>with the topic itself - atomic
+
+    loop forever
+        OW->>PG: claim outbox rows (SKIP LOCKED)
+        OW->>EMB: embed
+        OW->>QD: upsert vector
+        alt success
+            OW->>PG: status = done
+        else Qdrant down
+            OW->>PG: attempts += 1, keep last_error, back off
+            Note over OW,PG: the topic is NOT lost -<br/>only its searchability is delayed
+        end
+    end
+
+    Note over PG,QD: a topic whose vector is still owed is invisible to<br/>Qdrant - which is why resolve ALSO reads Postgres (P35)
+</script>
+<div class="note">
+Qdrant killed mid-drain was tested: the row retried, kept its error, the worker survived, and the vector appeared on restart.
+Stranded rows are reaped; rows that exhaust their retries are dead-lettered, and reconciliation then carries what the fast path gave up on.
+</div>
+
+<h3 class="diagram-title">4.6 Login</h3>
+<div class="diagram" data-diagram="s6"></div>
+<script type="text/x-mermaid" data-for="s6">
+sequenceDiagram
+    autonumber
+    actor U as Developer
+    participant A as app
+    participant S as serving
+    participant PG as postgres
+
+    U->>A: ID + password
+    A->>S: POST /v1/auth/login
+    S->>S: compare against .env in CONSTANT TIME
+    alt match
+        S->>S: sign token v1.payload.hmac
+        S-->>A: token
+        A->>A: store - keychain (native) / localStorage (web)
+    else no match
+        S-->>A: 401 "That ID or password is incorrect."
+    end
+
+    A->>S: every later request: Authorization Bearer token
+    S->>S: verify signature + expiry (constant-time compare)
+    S->>PG: find or create account, uid namespaced "dev:"
+    S-->>A: the requested resource
+    Note over A,S: a 401 signs the user out rather than leaving<br/>every screen failing silently
+</script>
+<div class="note bug">
+Before this existed, <code>AUTH_MODE=dev</code> trusted any bearer token <b>as</b> the identity, so a login screen on top of it would have been decoration.
+Google sign-in becomes a second branch yielding an identity into the same <code>requireAccount</code>. <b>Known gaps:</b> no rate limiting, and the web token
+lives in <code>localStorage</code>. This mode is for one machine and must be replaced before anything is network-reachable.
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 5 — STATE MACHINES                                           -->
+<!-- ============================================================ -->
+<section id="state">
+<h2><span class="num">05</span>State machines</h2>
+<div class="section-intro">
+Five things have states, and each state exists because collapsing it into another one caused a bug.
+</div>
+
+<h3 class="diagram-title">5.1 Topic <span>— the most important three words in the schema</span></h3>
+<div class="diagram" data-diagram="st1"></div>
+<script type="text/x-mermaid" data-for="st1">
+stateDiagram-v2
+    [*] --> pending : no match - topic + outbox, one txn
+
+    pending --> ready : a draft passed fact-check
+    pending --> empty : no draft survived, or no source
+
+    empty --> pending : re-queued (same row)
+    ready --> ready : more cards from a later run
+
+    note right of empty
+        Why this state must exist:
+        without it, a topic whose drafts
+        all failed is cached as a SUCCESS
+        and re-served forever.
+        The lookup treats empty as a MISS.
+    end note
+
+    note right of pending
+        Two things leave a topic PENDING rather
+        than moving it. A worker CLAIMS it:
+        claimed_at is a lease and doubles as
+        backoff, so a stale claim is reclaimable
+        and a worker that dies loses nothing.
+        Or the run ends DEGRADED, meaning the
+        checker broke rather than the card.
+    end note
+</script>
+<table>
+<tr><th>Outcome</th><th>What failed</th><th>Topic left as</th><th>Drafts quarantined?</th></tr>
+<tr><td><code>unsourced</code></td><td>no source could ground it</td><td><code>empty</code></td><td>no drafts existed</td></tr>
+<tr><td><code>empty</code></td><td>every draft was rejected</td><td><code>empty</code></td><td>yes, with reasons</td></tr>
+<tr><td><code>degraded</code></td><td><b>the checker itself</b> errored</td><td><code>pending</code></td><td><b>no</b></td></tr>
+</table>
+<div class="note bug">Collapsing these into "no cards" would report a 100% rejection rate for a broken gate and send someone to fix the generator — which is what P10 and P29 were about.</div>
+
+<h3 class="diagram-title">5.2 Field expansion <span>— candidate generation as a job</span></h3>
+<div class="diagram" data-diagram="st2"></div>
+<script type="text/x-mermaid" data-for="st2">
+stateDiagram-v2
+    [*] --> pending : enqueued by a feed request (kind='initial')<br/>or a "more topics" tap (kind='more')
+
+    pending --> running : claimed (SKIP LOCKED), claimed_at set
+    running --> done : candidates resolved, counts recorded
+    running --> pending : attempt failed - backoff, next_attempt_at in the future
+    running --> pending : worker died - REAPED (stale claim)
+    pending --> failed : attempts exhausted
+
+    done --> [*]
+    failed --> [*]
+
+    note right of pending
+        An INITIAL expansion is enqueued at
+        most ONCE per field, ever, and never
+        for a field that already has topics.
+        Otherwise a client polling every 3s
+        buys a 32-54s LLM run each time (P16).
+    end note
+
+    note right of done
+        kind='more' + done + topics_queued=0
+        + topics_linked=0 + failed_retried=0
+        = the field is genuinely exhausted.
+        The client stops offering the action.
+    end note
+</script>
+<div class="note">A partial failure while resolving finishes the job rather than regenerating: 32–54s of LLM output has already been paid for, and throwing it away to retry one candidate is the expensive kind of tidy.</div>
+
+<h3 class="diagram-title">5.3 Outbox row <span>— owed vectors</span></h3>
+<div class="diagram" data-diagram="st3"></div>
+<script type="text/x-mermaid" data-for="st3">
+stateDiagram-v2
+    [*] --> pending : written in the SAME transaction as the topic
+
+    pending --> processing : claimed by the outbox worker
+    processing --> done : vector upserted into Qdrant
+    processing --> pending : write failed - attempts += 1,<br/>last_error kept, next_attempt_at backed off
+    processing --> pending : worker died mid-row - REAPED
+    pending --> failed : retries exhausted - DEAD LETTER
+
+    failed --> pending : reconciliation notices the missing vector<br/>and re-enqueues it
+
+    note right of failed
+        Non-zero dead letters mean the slow
+        sweep is now carrying work the fast
+        path gave up on. Worth an alert,
+        not a panic.
+    end note
+</script>
+<div class="note">Reconciliation is <b>asymmetric on purpose</b>: a vector missing from Qdrant is re-enqueued (wasteful, safe); an orphan vector in Qdrant is deleted (a stale hit would be corruption).</div>
+
+<h3 class="diagram-title">5.4 Scroll <span>— retire, never delete</span></h3>
+<div class="diagram" data-diagram="st4"></div>
+<script type="text/x-mermaid" data-for="st4">
+stateDiagram-v2
+    [*] --> live : persisted after passing fact-check
+    live --> retired : flagged incorrect (retired_at set)
+
+    state live {
+        [*] --> servable
+        servable : appears in feed, revision, saves
+        servable : reachable through live_scroll
+    }
+
+    state retired {
+        [*] --> invisible
+        invisible : gone from EVERY read path
+        invisible : view history preserved
+        invisible : row still exists
+    }
+
+    note right of retired
+        A DELETE is blocked by trigger once
+        anyone has viewed the card: deleting
+        it would cascade away the view log,
+        which is both the paging position and
+        unrebuildable (P20).
+    end note
+</script>
+
+<h3 class="diagram-title">5.5 The feed page <span>— as the client sees it</span></h3>
+<div class="diagram" data-diagram="st5"></div>
+<script type="text/x-mermaid" data-for="st5">
+stateDiagram-v2
+    [*] --> loading : first request in flight
+
+    loading --> reading : cards arrived
+    loading --> waiting : zero cards, generating:true
+    loading --> finished : zero cards, exhausted:true
+
+    reading --> reading : J / swipe to next card;<br/>view logged after 600ms
+    reading --> waiting : ran out of cards in hand, field still generating
+    reading --> finished : ran out, nothing on the way
+
+    waiting --> reading : a poll returned new cards<br/>(they take the CURRENT index - no scroll<br/>position for a browser to snap back to)
+    waiting --> finished : expansion done, nothing produced
+
+    finished --> waiting : "More topics" tapped
+    finished --> revision : "Revise this field"
+    finished --> [*] : "Go to a related field"
+
+    revision --> revision : seen cards, oldest first, never exhausted
+
+    note right of finished
+        The feed NEVER silently loops back to
+        the start. Continuing is always one of
+        three explicit actions - that is the
+        engagement pattern streaks were
+        excluded to avoid (P8).
+    end note
+</script>
+<div class="note"><code>waiting</code> and <code>finished</code> look identical to a careless client — both are "no cards". That is why <code>generating</code> and <code>exhausted</code> are separate flags, and why an <i>owed</i> expansion counts toward <code>generating</code>.</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 6 — ACTIVITY                                                 -->
+<!-- ============================================================ -->
+<section id="activity">
+<h2><span class="num">06</span>Decision flows</h2>
+<div class="section-intro">
+Four decisions, branch by branch. Each has a bug behind it: the shape of the flow <i>is</i> the fix.
+</div>
+
+<h3 class="diagram-title">6.1 The generation graph <span>— five steps, one real branch, four endings</span></h3>
+<div class="diagram" data-diagram="a1"></div>
+<script type="text/x-mermaid" data-for="a1">
+flowchart TB
+    start(["topic worker claims a pending topic"]) --> fork{{" "}}
+
+    fork --> scrape["scrape<br/>Wikipedia, then Javadoc<br/>multi-candidate discovery<br/>+ relevance check"]
+    fork --> datagen["data_gen<br/>LLM supplementary material<br/>+ self-reported confidence"]
+
+    scrape --> join["join<br/>does nothing, and is<br/>load-bearing anyway"]
+    datagen --> join
+
+    join --> grounded{"grounding.ok?"}
+    grounded -->|no| unsourced["unsourced<br/>record in unsourced_topic<br/>topic to empty"]
+    grounded -->|yes| cardgen["card_gen<br/>2-4 drafts<br/>rejects an invented source_url"]
+
+    cardgen --> anydrafts{"any drafts?"}
+    anydrafts -->|no| empty["empty<br/>topic to empty<br/>drafts counted"]
+    anydrafts -->|yes| factcheck["fact_check<br/>each draft vs the gathered material"]
+
+    factcheck --> verdict{"what came back?"}
+    verdict -->|"at least one passed"| persist["persist<br/>cards + quarantine + counters<br/>ONE transaction, topic to ready"]
+    verdict -->|"all rejected"| empty
+    verdict -->|"checker errored,<br/>nothing genuinely failed"| degraded["degraded<br/>topic stays PENDING<br/>drafts NOT quarantined"]
+
+    persist --> done([END])
+    unsourced --> done
+    empty --> done
+    degraded --> done
+
+    classDef bug fill:#fee2e2,stroke:#dc2626,color:#0B1220
+    class join,degraded bug
+</script>
+<div class="note bug">
+<b>Why <code>join</code> exists (P30).</b> LangGraph fires a node when <b>any</b> inbound edge fires, not when all of them do.
+With the branch hanging off <code>scrape</code> directly, routing to <code>unsourced</code> did not stop <code>data_gen</code>'s edge from firing <code>card_gen</code> —
+so an <b>ungrounded topic still produced cards</b>, from LLM material with no source, and reported itself <code>ready</code>. Invariant 4 broken by orchestration
+while every agent behaved perfectly. Caught by a test written <i>because the join semantics were uncertain</i>, which asserts which steps did <b>not</b> run.
+</div>
+
+<h3 class="diagram-title">6.2 Topic resolution <span>— the four outcomes</span></h3>
+<div class="diagram" data-diagram="a2"></div>
+<script type="text/x-mermaid" data-for="a2">
+flowchart TB
+    c(["candidate: name + description"]) --> lock["pg_advisory_xact_lock<br/>hashtextextended('topic-candidate:' + name)"]
+    lock --> embed["embed(name + description)<br/>the ONE shared embedding text"]
+    embed --> search["search Qdrant topic_names"]
+    search --> pgread["ALSO read Postgres for same-name topics<br/>whose vector the outbox still owes"]
+
+    pgread --> choose{"any match >= 0.955?"}
+    choose -->|no| create["created<br/>INSERT topic(pending) + outbox<br/>one transaction"]
+    choose -->|yes| pick["chooseMatch - deterministic:<br/>score, then ready, then oldest, then id"]
+
+    pick --> what{"matched topic's status"}
+    what -->|ready| reused["reused<br/>INSERT field_topic<br/>cards serve immediately, zero cost"]
+    what -->|pending| joined["joined<br/>INSERT field_topic<br/>wait for the run already underway"]
+    what -->|empty| requeued["requeued<br/>the SAME row to pending<br/>never a duplicate"]
+
+    classDef guard fill:#fee2e2,stroke:#dc2626,color:#0B1220
+    class lock,pgread,pick guard
+</script>
+<div class="note bug">Each red box was seen failing with it removed (P35) — the table in §2.3 has the numbers.</div>
+
+<h3 class="diagram-title">6.3 Fact-checking a long source <span>— chunked, never truncated</span></h3>
+<div class="diagram" data-diagram="a3"></div>
+<script type="text/x-mermaid" data-for="a3">
+flowchart TB
+    d(["one draft card + the gathered material"]) --> size{"material length"}
+
+    size -->|"10,000 chars or fewer"| single["single pass<br/>whole source, one verdict"]
+    size -->|longer| chunks["split into 4,000-char chunks<br/>with 800-char overlap"]
+
+    chunks --> per["judge the draft against EACH chunk<br/>three-way verdict"]
+    per --> agg{"across all chunks"}
+    agg -->|"any chunk says CONTRADICTED"| fail["reject - rejected_draft<br/>with the checker's reason"]
+    agg -->|"some SUPPORTED, none contradicted"| pass["pass - persist as sourced_verified"]
+    agg -->|"all NOT_COVERED"| pass2["pass<br/>silence is not evidence"]
+
+    single --> sv{verdict}
+    sv -->|pass| pass
+    sv -->|fail| fail
+    sv -->|unrecognised| raise["raise - do NOT default to fail<br/>a prompt bug would otherwise quarantine<br/>every card and blame the generator (P29)"]
+
+    classDef bug fill:#fee2e2,stroke:#dc2626,color:#0B1220
+    class chunks,pass2,raise bug
+</script>
+<div class="note bug">
+<b>Why this shape (P33).</b> Ollama defaults <code>num_ctx</code> to 4096 and <b>silently truncates an over-long prompt from the front</b> — where the card sits.
+The gate had been approving cards it was never shown: 11 of 20 in one run, stamped <code>sourced_verified</code>. Detection of planted errors went
+<b>0/3 → 7/7</b> once chunked, with faithful controls still passing. <b>Only contradiction is decisive</b>, because absence from one fragment is not evidence.
+And the two size budgets are separate (10,000 vs 4,000): a 10k excerpt diluted attention enough that the model called an <i>inverted</i> claim "supported".
+</div>
+
+<h3 class="diagram-title">6.4 Logging a view, client-side <span>— where two silent bugs lived</span></h3>
+<div class="diagram" data-diagram="a4"></div>
+<script type="text/x-mermaid" data-for="a4">
+flowchart TB
+    shown(["a card is on screen"]) --> focused{"is this screen FOCUSED?"}
+    focused -->|"no - a stack screen the<br/>user navigated away from"| drop["log nothing<br/>and stop polling"]
+    focused -->|yes| timer{"still there after 600ms?"}
+
+    timer -->|"no - skipped past"| nothing["not an impression"]
+    timer -->|yes| seen{"already counted this visit?"}
+    seen -->|yes| nothing
+    seen -->|no| buffer["buffer the view"]
+
+    buffer --> when{"what happens next"}
+    when -->|"~1s passes"| send["POST /v1/views (batched)"]
+    when -->|"page hidden, refreshed<br/>or app backgrounded"| keep["POST /v1/views<br/>keepalive - outlives the page"]
+    when -->|"a new page is requested"| first["flush FIRST, then fetch<br/>or the server hands back<br/>cards already shown"]
+
+    send --> ok{"did it reach the server?"}
+    keep --> ok
+    first --> ok
+    ok -->|yes| done(["user_view row - append-only, permanent"])
+    ok -->|no| retry["keep it, retry on the next flush<br/>a dropped view corrupts the one<br/>dataset that cannot be rebuilt"]
+    retry --> when
+
+    classDef bug fill:#fee2e2,stroke:#dc2626,color:#0B1220
+    class focused,keep bug
+</script>
+<div class="note bug">
+<b>Both red boxes are P38</b>, found from one user report — "the deck always refreshes from 0".
+Without <code>keepalive</code> and the hidden-page flush, a refresh runs no unmount, the buffered view dies with the page, and the server correctly hands the
+same card back as card 01. Without the focus check, every feed screen ever opened stayed mounted — <code>Esc</code> pushed a <i>new</i> Home rather than going
+back — each keeping its keydown listener and display timer, so one press of J logged a card in every hidden copy. The log holds the same card
+<b>eight times at an identical millisecond</b>. Two faults, one append-only dataset, opposite directions, no error either way.
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 7 — WHAT CHANGED                                             -->
+<!-- ============================================================ -->
+<section id="changed">
+<h2><span class="num">07</span>What changed since the v1 planning diagram</h2>
+<div class="section-intro">
+<code>architecture-diagram.html</code> was drawn before any of this was built. It is kept for the record; where the two disagree, this file is right.
+</div>
+<table>
+<tr><th>v1 said</th><th>As built</th></tr>
+<tr><td>A <b>Common Backend API Gateway</b> in front of both clients</td><td>No gateway. One Expo codebase calls <code>serving</code> directly; CORS and a signed token do the work a gateway was imagined for.</td></tr>
+<tr><td><b>Fails check → deleted</b></td><td>Failed drafts are <b>quarantined</b> in <code>rejected_draft</code> with the checker's reason, capped at 20 per topic. An over-strict checker and a bad generator produce the same count — only the text separates them.</td></tr>
+<tr><td>Topics embedded into the vector DB at persist time</td><td>A <b>transactional outbox</b>: the intent is committed with the topic, and a worker drains it. The resolver therefore also reads Postgres, because Qdrant lags (P35).</td></tr>
+<tr><td><code>Account.saved_scroll_ids[]</code> as an array</td><td>A <code>saved_scroll</code> <b>table</b> with real foreign keys and ordering (P18, migration 004).</td></tr>
+<tr><td>Cards simply exist</td><td>Cards are <b>retired, never deleted</b>, and every read goes through <code>live_scroll</code> (P20, migration 005).</td></tr>
+<tr><td>Nothing about zero-card topics</td><td><code>topic.status</code> — <code>pending | ready | empty</code> — and three distinguishable ways to end with no cards. Without it the cache serves a failure as a success forever.</td></tr>
+<tr><td>Generation "triggered on cache miss", unspecified</td><td><b>Postgres is the queue.</b> <code>field_expansion</code> rows and <code>topic.status='pending'</code>, claimed with <code>FOR UPDATE SKIP LOCKED</code>; the claim doubles as backoff. No broker was added.</td></tr>
+<tr><td>Testing · Docker + Kubernetes · Prometheus + Grafana as a band</td><td>CI runs four jobs on every push; Docker Compose runs the stack. <b>K8s, Prometheus and Grafana do not exist yet</b> (W7) — <code>/metrics</code> is served and nothing scrapes it.</td></tr>
+<tr><td>"Specific LLM/model choices intentionally not decided"</td><td><code>qwen3:8b</code> local via Ollama with thinking off (P23), <code>intfloat/e5-base-v2</code> at threshold <b>0.955</b>, chosen by sweeping 44 labelled pairs.</td></tr>
+</table>
+</section>
+
+<footer>
+Generated 2026-09-18 from <code>Docs/uml/</code>, which holds the same 24 diagrams as Markdown for editing and diffing.
+Prose walkthrough: <code>Docs/SYSTEM-GUIDE.md</code>. Current state: <code>Docs/FEATURES.md</code>. Reasoning and every numbered problem: <code>Docs/DECISIONS.md</code>.<br>
+Diagrams render with Mermaid from a CDN; with no network, each block falls back to its source text, and the master diagram above always renders.
+</footer>
+
+<script type="module">
+  const blocks = [...document.querySelectorAll('script[type="text/x-mermaid"]')];
+  try {
+    const mermaid = (await import("https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs")).default;
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: "base",
+      themeVariables: {
+        background: "#0F1A2E",
+        primaryColor: "#1B2842",
+        primaryTextColor: "#E2E8F0",
+        primaryBorderColor: "#3B4A68",
+        secondaryColor: "#20304F",
+        tertiaryColor: "#162138",
+        lineColor: "#7C8CA8",
+        textColor: "#CBD5E1",
+        fontFamily: "Inter, -apple-system, Segoe UI, sans-serif",
+        fontSize: "14px",
+        noteBkgColor: "#1A1608",
+        noteTextColor: "#FDE68A",
+        noteBorderColor: "#CA8A04",
+        clusterBkg: "#131E33",
+        clusterBorder: "#3B4A68",
+        actorBkg: "#1B2842",
+        actorTextColor: "#E2E8F0",
+        signalColor: "#CBD5E1",
+        signalTextColor: "#CBD5E1",
+        labelBoxBkgColor: "#1B2842",
+        sequenceNumberColor: "#0B1220"
+      }
+    });
+    for (const [i, block] of blocks.entries()) {
+      const host = document.querySelector(`.diagram[data-diagram="${block.dataset.for}"]`);
+      if (!host) continue;
+      try {
+        const { svg } = await mermaid.render(`mmd-${i}`, block.textContent.trim());
+        host.innerHTML = svg;
+      } catch (err) {
+        host.innerHTML = `<div class="fallback">This diagram failed to render: ${err.message}</div><pre></pre>`;
+        host.querySelector("pre").textContent = block.textContent.trim();
+      }
+    }
+  } catch {
+    // Offline, or the CDN is blocked: show every diagram as its source text.
+    for (const block of blocks) {
+      const host = document.querySelector(`.diagram[data-diagram="${block.dataset.for}"]`);
+      if (!host) continue;
+      host.innerHTML = `<div class="fallback">Mermaid could not be loaded (no network?). Diagram source:</div><pre></pre>`;
+      host.querySelector("pre").textContent = block.textContent.trim();
+    }
+  }
+</script>
+
+</body>
+</html>

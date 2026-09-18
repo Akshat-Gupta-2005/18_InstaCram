@@ -8,15 +8,13 @@ Five things in this system have states, and each state exists because collapsing
 
 ```mermaid
 stateDiagram-v2
-    [*] --> pending : resolve finds no match<br/>(topic + outbox row, one transaction)
+    [*] --> pending : no match — topic + outbox, one txn
 
-    pending --> pending : claimed by the topic worker<br/>(claimed_at set — a lease, not a state)
-    pending --> ready : at least one draft passed fact-check
-    pending --> empty : no draft survived, OR no source could ground it
-    pending --> pending : checker itself failed → DEGRADED<br/>the gate broke, not the card
+    pending --> ready : a draft passed fact-check
+    pending --> empty : no draft survived, or no source
 
-    empty --> pending : re-queued by a "more topics" tap<br/>(the SAME row, never a duplicate)
-    ready --> ready : more cards added by a later run
+    empty --> pending : re-queued (same row)
+    ready --> ready : more cards from a later run
 
     note right of empty
         Why this state must exist:
@@ -27,11 +25,13 @@ stateDiagram-v2
     end note
 
     note right of pending
-        claimed_at doubles as backoff.
-        A claim older than the stale window
-        is reclaimable — so a worker that
-        died mid-topic loses nothing, and a
-        degraded run waits before retrying.
+        Two things leave a topic PENDING rather
+        than moving it. A worker CLAIMS it:
+        claimed_at is a lease and doubles as
+        backoff, so a stale claim is reclaimable
+        and a worker that dies loses nothing.
+        Or the run ends DEGRADED, meaning the
+        checker broke rather than the card.
     end note
 ```
 
