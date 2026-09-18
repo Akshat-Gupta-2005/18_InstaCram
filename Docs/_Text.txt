@@ -85,3 +85,31 @@ Input variety
 
 Let users request a topic directly ("add X to my feed") instead of only algorithmic sourcing
 Multi-language card generation for the same topic set
+
+
+update the docs, tell me the current standing of the project, open decisions, options to proceed with
+
+
+
+Docs updated
+DECISIONS.md — P33 written up in full (symptom → why the good number was attacked → measured root cause → blast radius → fix → before/after table → aftermath). Two new decision rows: thinking settled as off, and the two-budget split. LangGraph tripwire resolved — it was due at W4's end, and the condition wasn't met: three conditional edges and four terminal outcomes, not the one branch that set it. Kept, with P30 still counted as a cost it caused.
+FEATURES.md — header rewritten; §4 metrics table now carries real numbers instead of six "not measured" rows; new rows for the negative control and recheck_live.py; code map updated; open items now record the seed-placeholder finding and that CI has never run.
+IMPLEMENTATION-PLAN.md — 8d marked complete with the caveat that its headline number was withdrawn; "Start here" rewritten for W5.
+BUILD-PLAN.md — the Fact-Check Agent section now states chunking as a correctness requirement, and corrects a stale "Fail → deleted" (it's quarantined).
+Current standing
+W0–W4 are complete. One topic goes scrape → generate → fact-check → persist → vectorise at a 113s median. Sourcing is 10/10 on the benchmark. The gate is verified by negative control at 7/7 planted errors caught, 2/2 controls kept. All 12 live cards re-verified clean after P33, nothing retired. Six services from one command; 143 tests green across both suites.
+
+Not built: W5 (cache-then-generate — the thing that makes it a product), W6 (any client), W7 (K8s/Prometheus/Grafana/E2E).
+
+Three things are true that the green numbers don't show: auth is a dev stub that trusts the bearer token as identity; CI has never run once, with 29 files uncommitted; and the rejection rate is unmeasured — 0/9 is too small, and the old 0.000 over 20 is withdrawn, so P10's no-retry decision stays open.
+
+Open decisions
+Decision	Blocks	Who
+1	Frontend framework — React Native/Expo + Next.js were inferred from your past projects, never agreed	All of W6	You
+2	Firebase credentials	Task 2b.1; replacing dev auth	You
+3	What the feed shows for an empty topic — skipping silently is a choice, not a default	W5	Either
+4	Page size and prefetch threshold	W5	Either
+5	No-retry (P10) — needs a real rejection rate first	Revisit after W5	Data
+6	Ollama keep_alive — plausibly a chunk of the 113s	Perf only	Either
+7	GKE/EKS pricing — quoted from planning, never verified against a bill	W7	You
+Items 3 and 4 are the only ones that block W5, and both have defensible defaults I can propose when I reach them.
