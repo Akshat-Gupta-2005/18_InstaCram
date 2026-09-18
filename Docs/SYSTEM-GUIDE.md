@@ -2,6 +2,8 @@
 
 A learning document. It answers: what is running, what each container does, how they find each other, how the database is built and kept honest, and what it looks like when each piece breaks.
 
+**Diagrams:** [uml/](uml/) draws all of this — context, containers, deployment, components, ER, sequences, state machines and decision flows.
+
 The other documents answer different questions. [FEATURES](FEATURES.md) is what is true today, [DECISIONS](DECISIONS.md) is why it is this way (and every mistake made getting there), [BUILD-PLAN](BUILD-PLAN.md) is the intent, [API-CONTRACT](API-CONTRACT.md) is what clients may rely on. This one is the tour of the machine.
 
 ---

@@ -48,6 +48,7 @@ Cache-then-generate. A field request is turned into candidate topic names by an 
 | [Docs/BUILD-PLAN.md](Docs/BUILD-PLAN.md) | Intent: stack, architecture, data model, core logic, phases |
 | [Docs/FEATURES.md](Docs/FEATURES.md) | What is true right now — start here |
 | [Docs/SYSTEM-GUIDE.md](Docs/SYSTEM-GUIDE.md) | The running system: every container, how they link, how the database is built and kept honest, what each failure looks like |
+| [Docs/uml/](Docs/uml/) | The same system in 24 diagrams — context, containers, deployment, components, ER, sequences, state machines, decision flows |
 | [Docs/DECISIONS.md](Docs/DECISIONS.md) | Why it is this way. Append-only, including the reversals |
 | [Docs/IMPLEMENTATION-PLAN.md](Docs/IMPLEMENTATION-PLAN.md) | Build order, W0–W7 |
 | [Docs/API-CONTRACT.md](Docs/API-CONTRACT.md) | The contract both clients build against |
