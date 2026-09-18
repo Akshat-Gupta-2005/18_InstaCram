@@ -6,7 +6,7 @@ It is built for **priming and revision**: seeing a concept briefly so you are no
 
 ## Status
 
-**W0 and W1 done: a working skeleton, no features yet.** The schema (verified by 22 invariant checks), the API contract and the agent prompts are written, and all six services come up healthy from one command. There's no feed, no pipeline and no LLM call yet. Current state is always in [Docs/FEATURES.md](Docs/FEATURES.md).
+**W0–W5 done, W6 (the client) in progress.** Both halves are wired: naming a field generates candidate topics, reuses the ones that already exist, and runs the rest through the pipeline — scrape, generate, fact-check, persist, vectorise — while the feed serves cards as each topic finishes. There is an Expo app for web, iOS and Android, behind a developer login. Not done: Google sign-in, running on a phone, and W7's deployment and monitoring. Current state is always in [Docs/FEATURES.md](Docs/FEATURES.md); [Docs/SYSTEM-GUIDE.md](Docs/SYSTEM-GUIDE.md) explains the running system container by container.
 
 ## Running it
 
@@ -47,6 +47,7 @@ Cache-then-generate. A field request is turned into candidate topic names by an 
 |---|---|
 | [Docs/BUILD-PLAN.md](Docs/BUILD-PLAN.md) | Intent: stack, architecture, data model, core logic, phases |
 | [Docs/FEATURES.md](Docs/FEATURES.md) | What is true right now — start here |
+| [Docs/SYSTEM-GUIDE.md](Docs/SYSTEM-GUIDE.md) | The running system: every container, how they link, how the database is built and kept honest, what each failure looks like |
 | [Docs/DECISIONS.md](Docs/DECISIONS.md) | Why it is this way. Append-only, including the reversals |
 | [Docs/IMPLEMENTATION-PLAN.md](Docs/IMPLEMENTATION-PLAN.md) | Build order, W0–W7 |
 | [Docs/API-CONTRACT.md](Docs/API-CONTRACT.md) | The contract both clients build against |

@@ -131,6 +131,7 @@ Living document. Updated at the end of every working session, as part of the wor
 │   └── src/constants/                 parchment / ink palettes, fonts, type scale
 └── Docs/
     ├── BUILD-PLAN.md                  intent: stack, architecture, data model, core logic, phases, DoD
+    ├── SYSTEM-GUIDE.md                the running system: each container, how they link, how the DB is built, what each failure looks like
     ├── FEATURES.md                    this file — current state
     ├── DECISIONS.md                   append-only decisions log + numbered problems
     ├── IMPLEMENTATION-PLAN.md         task-level build order, W0–W7, dependencies and checkpoints
