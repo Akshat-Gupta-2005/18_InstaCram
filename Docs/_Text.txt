@@ -113,3 +113,18 @@ Decision	Blocks	Who
 6	Ollama keep_alive — plausibly a chunk of the 113s	Perf only	Either
 7	GKE/EKS pricing — quoted from planning, never verified against a bill	W7	You
 Items 3 and 4 are the only ones that block W5, and both have defensible defaults I can propose when I reach them.
+
+
+ui 
+templates
+generation 
+injection pipeline
+
+AI scraping generating pipeline
+client app
+serving
+testing
+CI
+database
+monitoring
+docker
